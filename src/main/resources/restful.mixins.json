@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "me.vibing.restful.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ServerGamePacketListenerImplMixin",
+    "ServerPlayerDeathMixin",
+    "ServerPlayerRespawnMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

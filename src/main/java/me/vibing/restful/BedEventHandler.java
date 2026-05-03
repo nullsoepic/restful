@@ -1,0 +1,162 @@
+package me.vibing.restful;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+
+public class BedEventHandler {
+
+    @SubscribeEvent
+    public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        Player player = event.getEntity();
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        if (event.getHand() != InteractionHand.MAIN_HAND) {
+            return;
+        }
+
+        Level level = event.getLevel();
+        BlockPos pos = event.getPos();
+        BlockState state = level.getBlockState(pos);
+
+        if (state.getBlock() instanceof BedBlock) {
+            ItemStack heldItem = player.getItemInHand(event.getHand());
+            if (heldItem.is(Items.NAME_TAG)) {
+                return;
+            }
+
+            if (!level.dimension().equals(Level.OVERWORLD)) {
+                serverPlayer.sendSystemMessage(
+                        Component.translatable("message.restful.bed_explodes_here"));
+                return;
+            }
+
+            BlockPos headPos = pos;
+            if (state.getValue(BedBlock.PART) != BedPart.HEAD) {
+                headPos = pos.relative(state.getValue(BedBlock.FACING));
+            }
+
+            GlobalPos bedPos = GlobalPos.of(level.dimension(), headPos);
+            BedTracker tracker = player.getData(Restful.BED_TRACKER);
+
+            int existingIndex = findBedIndex(tracker, bedPos);
+            int maxPoints = Config.MAX_POINTS.get();
+            String hexId = BedIdUtil.generateId(bedPos);
+
+            if (existingIndex == -1 && tracker.size() < maxPoints) {
+                var bedItem = BedTracker.getBedItemFromState(state);
+                boolean added = tracker.addBed(bedPos, null, bedItem, maxPoints);
+
+                if (added) {
+                    serverPlayer.sendSystemMessage(Component.translatable(
+                            "message.restful.added_point", hexId));
+                }
+            } else if (existingIndex != -1) {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "message.restful.already_have_point", hexId));
+            } else {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "message.restful.reached_limit"));
+            }
+        }
+
+        if (state.getBlock() instanceof RespawnAnchorBlock) {
+            if (state.getValue(RespawnAnchorBlock.CHARGE) <= 0) {
+                return;
+            }
+            if (!RespawnAnchorBlock.canSetSpawn(level)) {
+                return;
+            }
+
+            GlobalPos anchorPos = GlobalPos.of(level.dimension(), pos);
+            BedTracker tracker = player.getData(Restful.BED_TRACKER);
+
+            int existingIndex = findBedIndex(tracker, anchorPos);
+            int maxPoints = Config.MAX_POINTS.get();
+            String hexId = BedIdUtil.generateId(anchorPos);
+
+            if (existingIndex == -1 && tracker.size() < maxPoints) {
+                boolean added = tracker.addBed(anchorPos, "Anchor", Items.RESPAWN_ANCHOR, maxPoints);
+
+                if (added) {
+                    serverPlayer.sendSystemMessage(Component.translatable(
+                            "message.restful.added_point", hexId));
+                }
+            } else if (existingIndex != -1) {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "message.restful.already_have_point", hexId));
+            } else {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "message.restful.reached_limit"));
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        Player player = event.getEntity();
+        if (!(player instanceof ServerPlayer)) {
+            return;
+        }
+
+        BedTracker tracker = player.getData(Restful.BED_TRACKER);
+        int selectedIndex = tracker.getSelectedBedIndex();
+
+        if (selectedIndex >= 0) {
+            BedData selectedBed = tracker.getBed(selectedIndex);
+
+            if (selectedBed != null) {
+                boolean respawnedAtSelectedBed = player.level().dimension().equals(selectedBed.position().dimension())
+                        && player.blockPosition().closerThan(selectedBed.position().pos(), 10);
+
+                if (!respawnedAtSelectedBed) {
+                    String hexId = BedIdUtil.generateId(selectedBed.position());
+                    tracker.removeBed(selectedIndex);
+                    
+                    player.sendSystemMessage(Component.translatable(
+                            "message.restful.point_was_destroyed", hexId, selectedBed.displayName()));
+                }
+            }
+        }
+
+        tracker.setSelectedBedIndex(-1);
+    }
+
+    @SubscribeEvent
+    public void onPlayerClone(PlayerEvent.Clone event) {
+        Player oldPlayer = event.getOriginal();
+        Player newPlayer = event.getEntity();
+
+        BedTracker oldTracker = oldPlayer.getData(Restful.BED_TRACKER);
+        BedTracker newTracker = newPlayer.getData(Restful.BED_TRACKER);
+
+        for (BedData bed : oldTracker.getBeds()) {
+            newTracker.addBed(bed.position(), bed.name(), bed.bedItem(), 100);
+        }
+    }
+
+    private int findBedIndex(BedTracker tracker, GlobalPos pos) {
+        var beds = tracker.getBeds();
+        for (int i = 0; i < beds.size(); i++) {
+            if (beds.get(i).position().equals(pos)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+}
