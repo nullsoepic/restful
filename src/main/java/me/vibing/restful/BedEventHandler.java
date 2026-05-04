@@ -86,12 +86,10 @@ public class BedEventHandler {
             boolean added = tracker.addBed(pos, name, item, maxPoints);
 
             if (added) {
-                player.sendSystemMessage(Component.translatable(
-                        "message.restful.added_point", BedIdUtil.generateId(pos)));
+                player.sendSystemMessage(Component.translatable("message.restful.added_point"));
             }
         } else if (existingIndex != -1) {
-            player.sendSystemMessage(Component.translatable(
-                    "message.restful.already_have_point", BedIdUtil.generateId(pos)));
+            player.sendSystemMessage(Component.translatable("message.restful.already_have_point"));
         } else {
             player.sendSystemMessage(Component.translatable(
                     "message.restful.reached_limit"));
@@ -125,9 +123,7 @@ public class BedEventHandler {
         if (!respawnedAtSelectedBed) {
             tracker.removeBed(selectedIndex);
             player.sendSystemMessage(Component.translatable(
-                    "message.restful.point_was_destroyed",
-                    BedIdUtil.generateId(selectedBed.position()),
-                    selectedBed.name()));
+                    "message.restful.point_was_destroyed", selectedBed.name()));
         }
 
         tracker.setSelectedBedIndex(-1);

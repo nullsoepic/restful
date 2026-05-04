@@ -34,6 +34,21 @@ public class RestfulNetwork {
         );
 
         registrar.playToClient(
+                OpenManagementPacket.TYPE,
+                OpenManagementPacket.STREAM_CODEC,
+                (payload, context) -> {
+                    context.enqueueWork(() -> {
+                        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+                        if (minecraft.player != null) {
+                            minecraft.execute(() -> {
+                                minecraft.setScreen(new me.vibing.restful.client.BedManagementScreen(payload.beds()));
+                            });
+                        }
+                    });
+                }
+        );
+
+        registrar.playToClient(
                 RespawnNowPacket.TYPE,
                 RespawnNowPacket.STREAM_CODEC,
                 (payload, context) -> {
@@ -95,6 +110,72 @@ public class RestfulNetwork {
 
                             tracker.setSelectedBedIndex(payload.selectedIndex());
                             PacketDistributor.sendToPlayer(serverPlayer, new RespawnNowPacket());
+                        }
+                    });
+                }
+        );
+
+        // Management packets
+        registrar.playToServer(
+                ReorderBedPacket.TYPE,
+                ReorderBedPacket.STREAM_CODEC,
+                (payload, context) -> {
+                    context.enqueueWork(() -> {
+                        if (context.player() instanceof ServerPlayer serverPlayer) {
+                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
+                            // rebuild tracker in new order, preserving favorites
+                            var oldBeds = new ArrayList<>(tracker.getBeds());
+                            tracker.clear();
+                            for (int i : payload.newOrder()) {
+                                if (i >= 0 && i < oldBeds.size()) {
+                                    BedData bed = oldBeds.get(i);
+                                    // add with favorite status preserved
+                                    tracker.addBed(bed.position(), bed.name(), bed.bedItem(), 100);
+                                    if (bed.favorite()) {
+                                        tracker.setFavorite(tracker.size() - 1, true);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+        );
+
+        registrar.playToServer(
+                RenameBedPacket.TYPE,
+                RenameBedPacket.STREAM_CODEC,
+                (payload, context) -> {
+                    context.enqueueWork(() -> {
+                        if (context.player() instanceof ServerPlayer serverPlayer) {
+                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
+                            tracker.renameBed(payload.index(), payload.newName());
+                        }
+                    });
+                }
+        );
+
+        registrar.playToServer(
+                RemoveBedPacket.TYPE,
+                RemoveBedPacket.STREAM_CODEC,
+                (payload, context) -> {
+                    context.enqueueWork(() -> {
+                        if (context.player() instanceof ServerPlayer serverPlayer) {
+                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
+                            tracker.removeBed(payload.index());
+                        }
+                    });
+                }
+        );
+
+        registrar.playToServer(
+                FavoriteBedPacket.TYPE,
+                FavoriteBedPacket.STREAM_CODEC,
+                (payload, context) -> {
+                    context.enqueueWork(() -> {
+                        if (context.player() instanceof ServerPlayer serverPlayer) {
+                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
+                            boolean current = tracker.isFavorite(payload.index());
+                            tracker.setFavorite(payload.index(), !current);
                         }
                     });
                 }

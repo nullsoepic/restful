@@ -2,10 +2,10 @@
   "screen.restful.select_bed": "§l§eChoose Respawn Point",
   "screen.restful.select_bed.subtitle": "§7Click to respawn",
 
-  "message.restful.added_point": "§a✓ §fRespawn point added! §7(%s)",
+  "message.restful.added_point": "§a✓ §fRespawn point added!",
   "message.restful.reached_limit": "§c✗ §fMaximum respawn points reached! §7Use /restful to manage",
-  "message.restful.already_have_point": "§6⚠ §fYou already have this respawn point! §7(%s)",
-  "message.restful.point_was_destroyed": "§c✗ §fRespawn point §a%s §7(%s) §cwas destroyed! §fRespawning at world spawn...",
+  "message.restful.already_have_point": "§6⚠ §fYou already have this respawn point!",
+  "message.restful.point_was_destroyed": "§c✗ §fRespawn point §e%s §cwas destroyed! §fRespawning at world spawn...",
   "message.restful.bed_explodes_here": "§c✗ §cBeds explode in this dimension!",
 
   "tooltip.restful.dimension": "§7Dimension: §f%s",
@@ -14,35 +14,5 @@
   "config.restful.max_points": "Maximum Respawn Points",
   "config.restful.max_points.tooltip": "Maximum number of respawn points each player can have (0-100)",
 
-  "command.restful.help.title": "§6§lRestful Help",
-  "command.restful.help.commands_header": "§fCommands:",
-  "command.restful.help.cmd_list": "  §e/restful list        §7- Show all your respawn points",
-  "command.restful.help.cmd_remove": "  §e/restful remove <id> §7- Remove a point by its 4-char ID",
-  "command.restful.help.cmd_rename": "  §e/restful rename <id> <name> §7- Rename a point",
-  "command.restful.help.cmd_clear": "  §e/restful clear       §7- Remove all respawn points",
-  "command.restful.help.favorite": "  §e/restful favorite <id> §7- Mark as favorite",
-  "command.restful.help.ids_header": "§fPoint IDs:",
-  "command.restful.help.ids_desc1": "  §7Each point has a unique 4-character ID like §a51fa§7 or §a2b9c",
-  "command.restful.help.ids_desc2": "  §7Use the ID from §e/restful list §7for commands",
-  "command.restful.help.shortcuts": "§fShortcuts: §e1-9 §7to select in respawn screen",
-  "command.restful.help.max": "§fMax: §e%s points",
-  "command.restful.help.empty_line": "",
-
-  "command.restful.list.header": "§eYour Respawn Points",
-  "command.restful.list.footer": "§7Set: §f%s/%s",
-  "command.restful.list.none": "§7No respawn points set yet.",
-  "command.restful.list.empty_hint": "§7Right-click beds to add respawn points!",
-
-  "command.restful.remove.success": "§a✓ §fRemoved point §a%s §7(%s)",
-  "command.restful.remove.invalid": "§c✗ §fNo point found with ID §a%s§f. Use §7/restful list§f.",
-
-  "command.restful.rename.success": "§a✓ §fRenamed point §a%s §fto \"§e%s§f\"",
-  "command.restful.rename.invalid": "§c✗ §fNo point found with ID §a§7(%s)",
-  "command.restful.rename.failed": "§c✗ §fFailed to rename point.",
-
-  "command.restful.favorite.success": "§a✓ §fMarked §a%s §fas favorite",
-  "command.restful.favorite.removed": "§a✓ §fRemoved favorite from §a%s",
-
-  "command.restful.clear.success": "§a✓ §fCleared §e%s §frespawn points.",
-  "command.restful.usage": "§cUsage: §f/restful §7list§8|§7remove <id>§8|§7rename <id> <name>§8|§7favorite <id>§8|§7clear"
+  "command.restful.usage": "§cThis command can only be used by players."
 }

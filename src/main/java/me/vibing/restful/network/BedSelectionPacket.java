@@ -1,7 +1,6 @@
 package me.vibing.restful.network;
 
 import me.vibing.restful.BedData;
-import me.vibing.restful.BedIdUtil;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -26,13 +25,12 @@ public record BedSelectionPacket(List<BedInfo> beds) implements CustomPacketPayl
         return TYPE;
     }
     
-    public record BedInfo(GlobalPos position, String name, String itemId, int index, String bedId, boolean isFavorite) {
+    public record BedInfo(GlobalPos position, String name, String itemId, int index, boolean isFavorite) {
         public static final StreamCodec<RegistryFriendlyByteBuf, BedInfo> STREAM_CODEC = StreamCodec.composite(
                 GlobalPos.STREAM_CODEC, BedInfo::position,
                 ByteBufCodecs.STRING_UTF8, BedInfo::name,
                 ByteBufCodecs.STRING_UTF8, BedInfo::itemId,
                 ByteBufCodecs.VAR_INT, BedInfo::index,
-                ByteBufCodecs.STRING_UTF8, BedInfo::bedId,
                 ByteBufCodecs.BOOL, BedInfo::isFavorite,
                 BedInfo::new
         );
@@ -43,7 +41,6 @@ public record BedSelectionPacket(List<BedInfo> beds) implements CustomPacketPayl
                     data.name(),
                     data.bedItem().toString(),
                     index,
-                    BedIdUtil.generateId(data.position()),
                     isFavorite
             );
         }

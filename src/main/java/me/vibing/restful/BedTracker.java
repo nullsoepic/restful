@@ -87,6 +87,14 @@ public class BedTracker {
         return true;
     }
 
+    public boolean swapBeds(int indexA, int indexB) {
+        if (indexA < 0 || indexA >= beds.size() || indexB < 0 || indexB >= beds.size()) {
+            return false;
+        }
+        Collections.swap(beds, indexA, indexB);
+        return true;
+    }
+
     @Nullable
     public BedData getBed(int index) {
         if (index < 0 || index >= beds.size()) {
