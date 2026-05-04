@@ -21,15 +21,4 @@ public class BedIdUtil {
         return -1;
     }
     
-    public static boolean isValidId(String id) {
-        if (id == null || id.length() != 4) {
-            return false;
-        }
-        try {
-            Integer.parseInt(id, 16);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
 }

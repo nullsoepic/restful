@@ -37,7 +37,6 @@ public class BedSelectionScreen extends Screen {
 
     private final List<BedSelectionPacket.BedInfo> beds;
     private int gridTop;
-    private boolean hasSentSelection = false;
 
     public BedSelectionScreen(List<BedSelectionPacket.BedInfo> beds) {
         super(Component.literal("Choose Respawn Point"));
@@ -154,24 +153,18 @@ public class BedSelectionScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (hasSentSelection) return false;
-        
         if (keyCode >= GLFW.GLFW_KEY_1 && keyCode <= GLFW.GLFW_KEY_9) {
             int index = keyCode - GLFW.GLFW_KEY_1;
             if (index < beds.size()) {
-                hasSentSelection = true;
                 selectBed(beds.get(index).index());
                 return true;
             }
         }
-        
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (hasSentSelection) return false;
-
         int rows = (beds.size() + COLUMNS - 1) / COLUMNS;
         for (int i = 0; i < beds.size(); i++) {
             int row = i / COLUMNS;
@@ -188,7 +181,6 @@ public class BedSelectionScreen extends Screen {
 
             if (mouseX >= x && mouseX < x + TILE_SIZE
                     && mouseY >= y && mouseY < y + TILE_SIZE) {
-                hasSentSelection = true;
                 selectBed(bed.index());
                 return true;
             }
@@ -200,6 +192,9 @@ public class BedSelectionScreen extends Screen {
         PacketDistributor.sendToServer(new SelectBedPacket(index));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        Minecraft.getInstance().execute(() -> {
+            Minecraft.getInstance().setScreen(null);
+        });
     }
 
     private Item getItemFromId(String itemId) {

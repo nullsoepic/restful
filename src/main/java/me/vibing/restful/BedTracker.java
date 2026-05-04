@@ -3,6 +3,7 @@ package me.vibing.restful;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -43,13 +44,13 @@ public class BedTracker {
     }
     
     public boolean isFavorite(int index) {
-        if (index < 0 || index >= beds.size()) return false;
-        return beds.get(index).favorite();
+        BedData bed = getBed(index);
+        return bed != null && bed.favorite();
     }
     
     public void setFavorite(int index, boolean favorite) {
-        if (index < 0 || index >= beds.size()) return;
-        BedData old = beds.get(index);
+        BedData old = getBed(index);
+        if (old == null) return;
         beds.set(index, new BedData(old.position(), old.name(), old.bedItem(), favorite));
     }
 
@@ -95,13 +96,13 @@ public class BedTracker {
     }
 
     public int pruneInvalid(Player player) {
+        if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
+            return 0;
+        }
+        
         int removed = 0;
         for (int i = beds.size() - 1; i >= 0; i--) {
             BedData bed = beds.get(i);
-            
-            if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
-                continue;
-            }
             
             var targetLevel = serverLevel.getServer().getLevel(bed.position().dimension());
             if (targetLevel == null) {
@@ -186,7 +187,7 @@ public class BedTracker {
     public void fromTag(CompoundTag tag) {
         beds.clear();
         if (tag.contains("beds")) {
-            ListTag list = tag.getList("beds", 10);
+            ListTag list = tag.getList("beds", Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag bedTag = list.getCompound(i);
                 BedData bed = BedData.fromTag(bedTag);

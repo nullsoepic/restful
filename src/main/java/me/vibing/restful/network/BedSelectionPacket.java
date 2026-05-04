@@ -40,7 +40,7 @@ public record BedSelectionPacket(List<BedInfo> beds) implements CustomPacketPayl
         public static BedInfo fromBedData(BedData data, int index, boolean isFavorite) {
             return new BedInfo(
                     data.position(),
-                    data.displayName(),
+                    data.name(),
                     data.bedItem().toString(),
                     index,
                     BedIdUtil.generateId(data.position()),

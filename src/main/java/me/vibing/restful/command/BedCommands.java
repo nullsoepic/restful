@@ -46,45 +46,44 @@ public class BedCommands {
     }
 
     private static int showHelp(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.title"), false);
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.commands_header"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.cmd_list"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.cmd_remove"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.cmd_rename"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.cmd_clear"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.favorite"), false);
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.ids_header"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.ids_desc1"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.ids_desc2"), false);
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.shortcuts"), false);
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.help.max", Config.MAX_POINTS.get()), false);
         
         return 1;
     }
 
-    private static int listBeds(CommandSourceStack source) {
+    private static ServerPlayer getPlayer(CommandSourceStack source) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
             source.sendFailure(Component.translatable("command.restful.usage"));
-            return 0;
+            return null;
         }
+        return player;
+    }
+
+    private static int listBeds(CommandSourceStack source) {
+        ServerPlayer player = getPlayer(source);
+        if (player == null) return 0;
 
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         tracker.pruneInvalid(player);
         var beds = tracker.getBeds();
 
         if (beds.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
             source.sendSuccess(() -> Component.translatable("command.restful.list.none"), false);
             source.sendSuccess(() -> Component.translatable("command.restful.list.empty_hint"), false);
             return 1;
         }
 
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
         source.sendSuccess(() -> Component.translatable("command.restful.list.header"), false);
 
         for (int i = 0; i < beds.size(); i++) {
@@ -103,9 +102,9 @@ public class BedCommands {
             
             MutableComponent line;
             if (hasCustomName) {
-                line = Component.literal("§e" + name + " " + coords + " §8" + id);
+                line = Component.literal(" " + "§e" + name + " " + coords + " §8" + id);
             } else {
-                line = Component.literal(coords + " §8" + id);
+                line = Component.literal(" " + coords + " §8" + id);
             }
             
             source.sendSuccess(() -> line, false);
@@ -114,7 +113,6 @@ public class BedCommands {
         final int count = beds.size();
         final int max = Config.MAX_POINTS.get();
         source.sendSuccess(() -> Component.translatable("command.restful.list.footer", count, max), false);
-        source.sendSuccess(() -> Component.translatable("command.restful.help.empty_line"), false);
 
         return beds.size();
     }
@@ -129,10 +127,8 @@ public class BedCommands {
     }
 
     private static int removeBed(CommandSourceStack source, String idOrIndex) {
-        if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.translatable("command.restful.usage"));
-            return 0;
-        }
+        ServerPlayer player = getPlayer(source);
+        if (player == null) return 0;
 
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         
@@ -143,19 +139,16 @@ public class BedCommands {
         }
 
         BedData removed = tracker.getBed(index);
-        String id = BedIdUtil.generateId(removed.position());
         tracker.removeBed(index);
 
-        source.sendSuccess(() -> Component.translatable("command.restful.remove.success", id, removed.displayName()), true);
+        source.sendSuccess(() -> Component.translatable("command.restful.remove.success", BedIdUtil.generateId(removed.position()), removed.name()), true);
 
         return 1;
     }
 
     private static int renameBed(CommandSourceStack source, String idOrIndex, String newName) {
-        if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.translatable("command.restful.usage"));
-            return 0;
-        }
+        ServerPlayer player = getPlayer(source);
+        if (player == null) return 0;
 
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         
@@ -168,7 +161,6 @@ public class BedCommands {
         String trimmedName = newName.length() > 32 ? newName.substring(0, 32) : newName;
 
         BedData bed = tracker.getBed(index);
-        String id = BedIdUtil.generateId(bed.position());
         
         boolean renamed = tracker.renameBed(index, trimmedName);
 
@@ -177,16 +169,14 @@ public class BedCommands {
             return 0;
         }
 
-        source.sendSuccess(() -> Component.translatable("command.restful.rename.success", id, trimmedName), true);
+        source.sendSuccess(() -> Component.translatable("command.restful.rename.success", BedIdUtil.generateId(bed.position()), trimmedName), true);
 
         return 1;
     }
 
     private static int toggleFavorite(CommandSourceStack source, String idOrIndex) {
-        if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.translatable("command.restful.usage"));
-            return 0;
-        }
+        ServerPlayer player = getPlayer(source);
+        if (player == null) return 0;
 
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         
@@ -197,25 +187,22 @@ public class BedCommands {
         }
 
         BedData bed = tracker.getBed(index);
-        String id = BedIdUtil.generateId(bed.position());
 
         boolean isFavorite = tracker.isFavorite(index);
         tracker.setFavorite(index, !isFavorite);
 
         if (!isFavorite) {
-            source.sendSuccess(() -> Component.translatable("command.restful.favorite.success", id), true);
+            source.sendSuccess(() -> Component.translatable("command.restful.favorite.success", BedIdUtil.generateId(bed.position())), true);
         } else {
-            source.sendSuccess(() -> Component.translatable("command.restful.favorite.removed", id), true);
+            source.sendSuccess(() -> Component.translatable("command.restful.favorite.removed", BedIdUtil.generateId(bed.position())), true);
         }
 
         return 1;
     }
 
     private static int clearBeds(CommandSourceStack source) {
-        if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.translatable("command.restful.usage"));
-            return 0;
-        }
+        ServerPlayer player = getPlayer(source);
+        if (player == null) return 0;
 
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         int count = tracker.size();
@@ -228,10 +215,11 @@ public class BedCommands {
     }
 
     private static int findBedIndex(BedTracker tracker, String idOrIndex) {
-        if (BedIdUtil.isValidId(idOrIndex)) {
-            return BedIdUtil.findBedById(tracker, idOrIndex);
-        }
+        // try hex ID first
+        int idx = BedIdUtil.findBedById(tracker, idOrIndex);
+        if (idx >= 0) return idx;
         
+        // try numeric index
         try {
             int index = Integer.parseInt(idOrIndex) - 1;
             if (index >= 0 && index < tracker.size()) {

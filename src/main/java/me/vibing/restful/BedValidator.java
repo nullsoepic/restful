@@ -83,9 +83,4 @@ public class BedValidator {
         
         return false;
     }
-    
-    public static float getRespawnAngle(Player player, GlobalPos pos) {
-        // dont call player.getRespawnAngle() or we get infinite recursion from the mixin
-        return player.getYRot();
-    }
 }

@@ -71,20 +71,27 @@ public class BedEventHandler {
     private void handleRespawnBlock(ServerPlayer player, GlobalPos pos, String name, Item item) {
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
 
-        int existingIndex = findBedIndex(tracker, pos);
+        int existingIndex = -1;
+        var beds = tracker.getBeds();
+        for (int i = 0; i < beds.size(); i++) {
+            if (beds.get(i).position().equals(pos)) {
+                existingIndex = i;
+                break;
+            }
+        }
+
         int maxPoints = Config.MAX_POINTS.get();
-        String hexId = BedIdUtil.generateId(pos);
 
         if (existingIndex == -1 && tracker.size() < maxPoints) {
             boolean added = tracker.addBed(pos, name, item, maxPoints);
 
             if (added) {
                 player.sendSystemMessage(Component.translatable(
-                        "message.restful.added_point", hexId));
+                        "message.restful.added_point", BedIdUtil.generateId(pos)));
             }
         } else if (existingIndex != -1) {
             player.sendSystemMessage(Component.translatable(
-                    "message.restful.already_have_point", hexId));
+                    "message.restful.already_have_point", BedIdUtil.generateId(pos)));
         } else {
             player.sendSystemMessage(Component.translatable(
                     "message.restful.reached_limit"));
@@ -101,21 +108,26 @@ public class BedEventHandler {
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         int selectedIndex = tracker.getSelectedBedIndex();
 
-        if (selectedIndex >= 0) {
-            BedData selectedBed = tracker.getBed(selectedIndex);
+        if (selectedIndex < 0) {
+            tracker.setSelectedBedIndex(-1);
+            return;
+        }
 
-            if (selectedBed != null) {
-                boolean respawnedAtSelectedBed = player.level().dimension().equals(selectedBed.position().dimension())
-                        && player.blockPosition().closerThan(selectedBed.position().pos(), 10);
+        BedData selectedBed = tracker.getBed(selectedIndex);
+        if (selectedBed == null) {
+            tracker.setSelectedBedIndex(-1);
+            return;
+        }
 
-                if (!respawnedAtSelectedBed) {
-                    String hexId = BedIdUtil.generateId(selectedBed.position());
-                    tracker.removeBed(selectedIndex);
-                    
-                    player.sendSystemMessage(Component.translatable(
-                            "message.restful.point_was_destroyed", hexId, selectedBed.displayName()));
-                }
-            }
+        boolean respawnedAtSelectedBed = player.level().dimension().equals(selectedBed.position().dimension())
+                && player.blockPosition().closerThan(selectedBed.position().pos(), 10);
+
+        if (!respawnedAtSelectedBed) {
+            tracker.removeBed(selectedIndex);
+            player.sendSystemMessage(Component.translatable(
+                    "message.restful.point_was_destroyed",
+                    BedIdUtil.generateId(selectedBed.position()),
+                    selectedBed.name()));
         }
 
         tracker.setSelectedBedIndex(-1);
@@ -134,13 +146,4 @@ public class BedEventHandler {
         }
     }
 
-    private int findBedIndex(BedTracker tracker, GlobalPos pos) {
-        var beds = tracker.getBeds();
-        for (int i = 0; i < beds.size(); i++) {
-            if (beds.get(i).position().equals(pos)) {
-                return i;
-            }
-        }
-        return -1;
-    }
 }

@@ -57,6 +57,12 @@ public class RestfulNetwork {
                     context.enqueueWork(() -> {
                         if (context.player() instanceof ServerPlayer serverPlayer) {
                             BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
+
+                            if (payload.selectedIndex() < 0 || payload.selectedIndex() >= tracker.size()) {
+                                sendBedSelection(serverPlayer);
+                                return;
+                            }
+
                             BedData selectedBed = tracker.getBed(payload.selectedIndex());
 
                             if (selectedBed == null) {

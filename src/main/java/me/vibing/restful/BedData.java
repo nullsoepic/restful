@@ -16,10 +16,6 @@ public record BedData(GlobalPos position, String name, Item bedItem, long timest
         this(position, name != null ? name : formatCoords(position), bedItem, System.currentTimeMillis(), favorite);
     }
     
-    public BedData(GlobalPos position, @Nullable String name, Item bedItem) {
-        this(position, name != null ? name : formatCoords(position), bedItem, System.currentTimeMillis(), false);
-    }
-    
     private static String formatCoords(GlobalPos pos) {
         return String.format("%d, %d, %d", pos.pos().getX(), pos.pos().getY(), pos.pos().getZ());
     }
@@ -57,10 +53,6 @@ public record BedData(GlobalPos position, String name, Item bedItem, long timest
         }
         
         return new BedData(pos, name, item, tag.getLong("time"), tag.getBoolean("favorite"));
-    }
-    
-    public String displayName() {
-        return name;
     }
     
     public String dimensionDisplay() {
