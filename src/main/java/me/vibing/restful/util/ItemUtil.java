@@ -5,10 +5,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
-// Utility for safe item parsing from string IDs
 public final class ItemUtil {
 
-    private ItemUtil() {} // util class, no instances
+    private ItemUtil() {}
 
     public static Item parseBedItem(String itemId) {
         if (itemId == null || itemId.isEmpty()) {

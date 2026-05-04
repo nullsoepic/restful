@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// intercepts respawn requests to show bed selection BEFORE vanilla respawn handles it
+// hijacking respawn click to show our GUI before vanilla takes over
 @Mixin(ServerGamePacketListenerImpl.class)
 public class ServerGamePacketListenerImplMixin {
 
@@ -39,8 +39,7 @@ public class ServerGamePacketListenerImplMixin {
         }
 
         if (tracker.getSelectedBedIndex() >= 0) {
-            // dont clear here - ServerPlayerRespawnMixin needs it first
-            // PlayerRespawnEvent will clear it later
+            // ServerPlayerRespawnMixin needs this value first
             return;
         }
 

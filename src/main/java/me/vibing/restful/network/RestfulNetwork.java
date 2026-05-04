@@ -9,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import me.vibing.restful.client.BedManagementScreen;
 import me.vibing.restful.client.BedSelectionScreen;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;

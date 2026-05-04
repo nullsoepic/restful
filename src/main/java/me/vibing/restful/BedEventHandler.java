@@ -5,8 +5,8 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
@@ -96,8 +96,7 @@ public class BedEventHandler {
             return;
         }
 
-        // beds are validated during sendBedSelection before player sees selection screen
-        // just clear the selection, invalid beds were already filtered out
+        // reset selection so next death doesn't auto pick without asking
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
         tracker.setSelectedBedIndex(-1);
     }

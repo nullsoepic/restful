@@ -17,7 +17,6 @@ import java.util.Optional;
 
 public class BedValidator {
 
-    // Validates bed with chunk loading - used during death/management when we need to know NOW
     public static boolean isValidRespawnPoint(Player player, GlobalPos globalPos) {
         if (!(player.level() instanceof ServerLevel serverLevel)) {
             return false;
@@ -28,7 +27,6 @@ public class BedValidator {
             return false;
         }
 
-        // Load chunk if needed - temporary load just for validation
         ChunkPos chunkPos = new ChunkPos(globalPos.pos());
         if (!targetLevel.hasChunk(chunkPos.x, chunkPos.z)) {
             ChunkAccess chunk = targetLevel.getChunkSource().getChunk(chunkPos.x, chunkPos.z, ChunkStatus.FULL, true);
@@ -69,22 +67,28 @@ public class BedValidator {
         if (!(state.getBlock() instanceof BedBlock)) {
             return false;
         }
+        return findValidSpawnPosition(level, pos.pos()).isPresent();
+    }
 
-        // Check for valid spawn position around the bed
+    private static Optional<BlockPos> findValidSpawnPosition(ServerLevel level, BlockPos bedPos) {
         for (int yOffset = -1; yOffset <= 2; yOffset++) {
             for (int xOffset = -2; xOffset <= 2; xOffset++) {
                 for (int zOffset = -2; zOffset <= 2; zOffset++) {
-                    BlockPos checkPos = pos.pos().offset(xOffset, yOffset, zOffset);
-                    if (level.isEmptyBlock(checkPos) && level.isEmptyBlock(checkPos.above())) {
-                        BlockPos below = checkPos.below();
-                        if (!level.isEmptyBlock(below) || level.getFluidState(below).isSource()) {
-                            return true;
-                        }
+                    BlockPos checkPos = bedPos.offset(xOffset, yOffset, zOffset);
+                    if (isValidSpawnSpot(level, checkPos)) {
+                        return Optional.of(checkPos);
                     }
                 }
             }
         }
+        return Optional.empty();
+    }
 
-        return false;
+    private static boolean isValidSpawnSpot(ServerLevel level, BlockPos pos) {
+        if (!level.isEmptyBlock(pos) || !level.isEmptyBlock(pos.above())) {
+            return false;
+        }
+        BlockPos below = pos.below();
+        return !level.isEmptyBlock(below) || level.getFluidState(below).isSource();
     }
 }

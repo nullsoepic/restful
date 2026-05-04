@@ -48,6 +48,19 @@ public class BedSelectionScreen extends Screen {
         gridTop = (height - gridHeight) / 2;
     }
 
+    private record TilePos(int x, int y) {}
+
+    private TilePos getTilePos(int index) {
+        int row = index / COLUMNS;
+        int col = index % COLUMNS;
+        int itemsInRow = Math.min(COLUMNS, beds.size() - row * COLUMNS);
+        int rowWidth = itemsInRow * TILE_SIZE + (itemsInRow - 1) * TILE_SPACING;
+        int rowStartX = (width - rowWidth) / 2;
+        int x = rowStartX + col * (TILE_SIZE + TILE_SPACING);
+        int y = gridTop + row * (TILE_SIZE + TILE_SPACING);
+        return new TilePos(x, y);
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0xE0000000);
@@ -62,16 +75,9 @@ public class BedSelectionScreen extends Screen {
         graphics.drawCenteredString(font, Component.literal(subtitle), width / 2, gridTop - 20, 0xAAAAAA);
 
         for (int i = 0; i < beds.size(); i++) {
-            int row = i / COLUMNS;
-            int col = i % COLUMNS;
-
-            int itemsInRow = Math.min(COLUMNS, beds.size() - row * COLUMNS);
-            int rowWidth = itemsInRow * TILE_SIZE + (itemsInRow - 1) * TILE_SPACING;
-            int rowStartX = (width - rowWidth) / 2;
-
-            int x = rowStartX + col * (TILE_SIZE + TILE_SPACING);
-            int y = gridTop + row * (TILE_SIZE + TILE_SPACING);
-
+            TilePos tilePos = getTilePos(i);
+            int x = tilePos.x;
+            int y = tilePos.y;
             BedInfo bed = beds.get(i);
 
             boolean hovered = mouseX >= x && mouseX < x + TILE_SIZE
@@ -162,23 +168,11 @@ public class BedSelectionScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        int rows = (beds.size() + COLUMNS - 1) / COLUMNS;
         for (int i = 0; i < beds.size(); i++) {
-            int row = i / COLUMNS;
-            int col = i % COLUMNS;
-
-            int itemsInRow = Math.min(COLUMNS, beds.size() - row * COLUMNS);
-            int rowWidth = itemsInRow * TILE_SIZE + (itemsInRow - 1) * TILE_SPACING;
-            int rowStartX = (width - rowWidth) / 2;
-
-            int x = rowStartX + col * (TILE_SIZE + TILE_SPACING);
-            int y = gridTop + row * (TILE_SIZE + TILE_SPACING);
-
-            BedInfo bed = beds.get(i);
-
-            if (mouseX >= x && mouseX < x + TILE_SIZE
-                    && mouseY >= y && mouseY < y + TILE_SIZE) {
-                selectBed(bed.index());
+            TilePos pos = getTilePos(i);
+            if (mouseX >= pos.x && mouseX < pos.x + TILE_SIZE
+                    && mouseY >= pos.y && mouseY < pos.y + TILE_SIZE) {
+                selectBed(beds.get(i).index());
                 return true;
             }
         }

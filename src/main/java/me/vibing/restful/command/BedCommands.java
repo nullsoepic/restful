@@ -10,7 +10,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-// commands for managing respawn points - now just opens the GUI
 public class BedCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {

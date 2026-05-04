@@ -22,8 +22,6 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import javax.annotation.Nullable;
 
-// restful mod - multiple backup respawn points for minecraft
-// uses neoforge data attachments for persistence
 @Mod(Restful.MODID)
 public class Restful {
     public static final String MODID = "restful";
@@ -45,10 +43,8 @@ public class Restful {
         modEventBus.addListener(RestfulNetwork::register);
         NeoForge.EVENT_BUS.addListener(this::registerCommands);
         
-        // PlayerEvent.Clone needs the game bus, not the mod bus
         NeoForge.EVENT_BUS.register(new BedEventHandler());
         
-        // MAX_POINTS is server-side only - each server can have different limits
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
     }
     

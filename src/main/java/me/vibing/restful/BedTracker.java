@@ -106,7 +106,6 @@ public class BedTracker {
 
     @Nullable
     public BedData findBestValidBed(Player player) {
-        // Check favorites first
         for (int i = beds.size() - 1; i >= 0; i--) {
             if (isFavorite(i)) {
                 BedData bed = beds.get(i);
@@ -116,7 +115,6 @@ public class BedTracker {
             }
         }
 
-        // Then check non-favorites (most recent first)
         for (int i = beds.size() - 1; i >= 0; i--) {
             if (isFavorite(i)) continue;
 
