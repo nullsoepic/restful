@@ -9,15 +9,7 @@ public class BedIdUtil {
         int unsignedHash = hash & 0xFFFF;
         return String.format("%04x", unsignedHash);
     }
-    
-    public static String formatForDisplay(String id) {
-        return "§7(" + id + "§7)";
-    }
-    
-    public static String formatForTooltip(String id) {
-        return "§8[" + id + "§8]";
-    }
-    
+
     public static int findBedById(BedTracker tracker, String id) {
         var beds = tracker.getBeds();
         for (int i = 0; i < beds.size(); i++) {

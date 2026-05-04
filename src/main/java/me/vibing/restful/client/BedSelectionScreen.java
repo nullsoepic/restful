@@ -37,7 +37,6 @@ public class BedSelectionScreen extends Screen {
 
     private final List<BedSelectionPacket.BedInfo> beds;
     private int gridTop;
-    private int hoveredIndex = -1;
     private boolean hasSentSelection = false;
 
     public BedSelectionScreen(List<BedSelectionPacket.BedInfo> beds) {
@@ -81,7 +80,6 @@ public class BedSelectionScreen extends Screen {
 
             boolean hovered = mouseX >= x && mouseX < x + TILE_SIZE
                     && mouseY >= y && mouseY < y + TILE_SIZE;
-            if (hovered) hoveredIndex = i;
 
             int bgColor;
             if (bed.isFavorite()) {

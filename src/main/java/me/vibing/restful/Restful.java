@@ -69,21 +69,4 @@ public class Restful {
             return tracker.toTag();
         }
     }
-    
-    public static String getNumberSuffix(int number) {
-        int lastTwo = number % 100;
-        int lastOne = number % 10;
-
-        // teens are always "th" (11th, 12th, 13th not 11st, 12nd, 13rd)
-        if (lastTwo >= 11 && lastTwo <= 13) {
-            return "th";
-        }
-
-        return switch (lastOne) {
-            case 1 -> "st";
-            case 2 -> "nd";
-            case 3 -> "rd";
-            default -> "th";
-        };
-    }
 }

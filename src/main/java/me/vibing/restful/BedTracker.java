@@ -54,29 +54,6 @@ public class BedTracker {
             favorites.set(index, favorite);
         }
     }
-    
-    public List<BedData> getSortedBeds() {
-        List<BedData> sorted = new ArrayList<>();
-        List<Integer> favoriteIndices = new ArrayList<>();
-        List<Integer> regularIndices = new ArrayList<>();
-        
-        for (int i = 0; i < beds.size(); i++) {
-            if (isFavorite(i)) {
-                favoriteIndices.add(i);
-            } else {
-                regularIndices.add(i);
-            }
-        }
-        
-        for (int i : favoriteIndices) {
-            sorted.add(beds.get(i));
-        }
-        for (int i : regularIndices) {
-            sorted.add(beds.get(i));
-        }
-        
-        return sorted;
-    }
 
     public boolean addBed(GlobalPos pos, @Nullable String name, Item bedItem, int maxBeds) {
         for (BedData existing : beds) {
