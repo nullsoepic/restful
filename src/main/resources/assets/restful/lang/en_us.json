@@ -2,7 +2,6 @@
   "message.restful.added_point": "§a✓ §fRespawn point added!",
   "message.restful.reached_limit": "§c✗ §fMaximum respawn points reached! §7Use /restful to manage",
   "message.restful.already_have_point": "§6⚠ §fYou already have this respawn point!",
-  "message.restful.point_was_destroyed": "§c✗ §fRespawn point §e%s §cwas destroyed! §fRespawning at world spawn...",
   "config.restful.max_points": "Maximum Respawn Points",
   "config.restful.max_points.tooltip": "Maximum number of respawn points each player can have (0-100)",
 
