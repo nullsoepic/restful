@@ -16,7 +16,6 @@ import java.util.List;
 
 public class BedTracker {
     private final List<BedData> beds = new ArrayList<>();
-    private final List<Boolean> favorites = new ArrayList<>();
     private int selectedBedIndex = -1;
     
     public List<BedData> getBeds() {
@@ -33,7 +32,6 @@ public class BedTracker {
     
     public void clear() {
         beds.clear();
-        favorites.clear();
     }
     
     public int getSelectedBedIndex() {
@@ -45,14 +43,14 @@ public class BedTracker {
     }
     
     public boolean isFavorite(int index) {
-        if (index < 0 || index >= favorites.size()) return false;
-        return favorites.get(index);
+        if (index < 0 || index >= beds.size()) return false;
+        return beds.get(index).favorite();
     }
     
     public void setFavorite(int index, boolean favorite) {
-        if (index >= 0 && index < favorites.size()) {
-            favorites.set(index, favorite);
-        }
+        if (index < 0 || index >= beds.size()) return;
+        BedData old = beds.get(index);
+        beds.set(index, new BedData(old.position(), old.name(), old.bedItem(), favorite));
     }
 
     public boolean addBed(GlobalPos pos, @Nullable String name, Item bedItem, int maxBeds) {
@@ -66,8 +64,7 @@ public class BedTracker {
             return false;
         }
         
-        beds.add(new BedData(pos, name, bedItem));
-        favorites.add(false);
+        beds.add(new BedData(pos, name, bedItem, false));
         return true;
     }
 
@@ -76,7 +73,7 @@ public class BedTracker {
             return false;
         }
         BedData oldBed = beds.get(index);
-        BedData renamedBed = new BedData(oldBed.position(), newName, oldBed.bedItem());
+        BedData renamedBed = new BedData(oldBed.position(), newName, oldBed.bedItem(), oldBed.favorite());
         beds.set(index, renamedBed);
         return true;
     }
@@ -86,7 +83,6 @@ public class BedTracker {
             return false;
         }
         beds.remove(index);
-        favorites.remove(index);
         return true;
     }
 
@@ -111,7 +107,6 @@ public class BedTracker {
             if (targetLevel == null) {
                 Restful.LOGGER.debug("Pruned bed at {} - dimension not found", bed.position());
                 beds.remove(i);
-                favorites.remove(i);
                 removed++;
                 continue;
             }
@@ -124,7 +119,6 @@ public class BedTracker {
             if (!valid) {
                 Restful.LOGGER.debug("Pruned invalid bed at {}", bed.position());
                 beds.remove(i);
-                favorites.remove(i);
                 removed++;
             }
         }
@@ -178,10 +172,9 @@ public class BedTracker {
     public CompoundTag toTag() {
         CompoundTag tag = new CompoundTag();
         ListTag list = new ListTag();
-        for (int i = 0; i < beds.size(); i++) {
-            CompoundTag bedTag = beds.get(i).toTag();
+        for (BedData bed : beds) {
+            CompoundTag bedTag = bed.toTag();
             if (bedTag != null) {
-                bedTag.putBoolean("favorite", isFavorite(i));
                 list.add(bedTag);
             }
         }
@@ -192,7 +185,6 @@ public class BedTracker {
 
     public void fromTag(CompoundTag tag) {
         beds.clear();
-        favorites.clear();
         if (tag.contains("beds")) {
             ListTag list = tag.getList("beds", 10);
             for (int i = 0; i < list.size(); i++) {
@@ -200,7 +192,6 @@ public class BedTracker {
                 BedData bed = BedData.fromTag(bedTag);
                 if (bed != null) {
                     beds.add(bed);
-                    favorites.add(bedTag.getBoolean("favorite"));
                 }
             }
         }
