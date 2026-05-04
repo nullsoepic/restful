@@ -2,19 +2,17 @@ package me.vibing.restful.client;
 
 import me.vibing.restful.network.BedInfo;
 import me.vibing.restful.network.C2SBedActionPacket;
+import me.vibing.restful.util.ItemUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
@@ -234,9 +232,12 @@ public class BedManagementScreen extends Screen {
         return super.charTyped(codePoint, modifiers);
     }
 
+    private static final int MAX_NAME_LENGTH = 40;
+
     private void startEditing(int index) {
         editingIndex = index;
         activeEditBox = new EditBox(font, 0, 0, LIST_WIDTH - 160, 18, Component.empty());
+        activeEditBox.setMaxLength(MAX_NAME_LENGTH);
         activeEditBox.setValue(beds.get(index).name);
         activeEditBox.setFocused(true);
         activeEditBox.setTextColor(0xFFFFD700);
@@ -304,16 +305,7 @@ public class BedManagementScreen extends Screen {
     }
 
     private static Item parseBedItem(String itemId) {
-        if (itemId == null || itemId.isEmpty()) {
-            return Items.RED_BED;
-        }
-        try {
-            ResourceLocation id = ResourceLocation.parse(itemId);
-            Item item = BuiltInRegistries.ITEM.get(id);
-            return item != Items.AIR ? item : Items.RED_BED;
-        } catch (Exception e) {
-            return Items.RED_BED;
-        }
+        return ItemUtil.parseBedItem(itemId);
     }
 
     private static class ManagedBed {

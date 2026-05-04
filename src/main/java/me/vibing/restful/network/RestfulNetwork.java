@@ -3,6 +3,7 @@ package me.vibing.restful.network;
 import me.vibing.restful.BedData;
 import me.vibing.restful.BedTracker;
 import me.vibing.restful.BedValidator;
+import me.vibing.restful.Config;
 import me.vibing.restful.Restful;
 import net.minecraft.client.Minecraft;
 import me.vibing.restful.client.BedManagementScreen;
@@ -28,9 +29,14 @@ public class RestfulNetwork {
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         Minecraft minecraft = Minecraft.getInstance();
-                        if (minecraft.player != null) {
+                        // Capture player reference on this thread to avoid race condition
+                        var player = minecraft.player;
+                        if (player != null && player.level() != null) {
                             minecraft.execute(() -> {
-                                minecraft.setScreen(new BedSelectionScreen(payload.beds()));
+                                // Check again in case player disconnected during execute scheduling
+                                if (minecraft.player == player) {
+                                    minecraft.setScreen(new BedSelectionScreen(payload.beds()));
+                                }
                             });
                         }
                     });
@@ -43,9 +49,12 @@ public class RestfulNetwork {
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         Minecraft minecraft = Minecraft.getInstance();
-                        if (minecraft.player != null) {
+                        var player = minecraft.player;
+                        if (player != null && player.level() != null) {
                             minecraft.execute(() -> {
-                                minecraft.setScreen(new BedManagementScreen(payload.beds()));
+                                if (minecraft.player == player) {
+                                    minecraft.setScreen(new BedManagementScreen(payload.beds()));
+                                }
                             });
                         }
                     });
@@ -58,11 +67,16 @@ public class RestfulNetwork {
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         Minecraft minecraft = Minecraft.getInstance();
-                        if (minecraft.player != null && minecraft.getConnection() != null) {
+                        var player = minecraft.player;
+                        var connection = minecraft.getConnection();
+                        if (player != null && player.level() != null && connection != null) {
                             minecraft.execute(() -> {
-                                minecraft.getConnection().send(
-                                        new ServerboundClientCommandPacket(
-                                                ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                                // Verify connection still valid before sending
+                                if (minecraft.getConnection() != null) {
+                                    minecraft.getConnection().send(
+                                            new ServerboundClientCommandPacket(
+                                                    ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                                }
                             });
                         }
                     });
@@ -87,21 +101,56 @@ public class RestfulNetwork {
                                     PacketDistributor.sendToPlayer(serverPlayer, new S2CRespawnNowPacket());
                                 }
                                 case FAVORITE -> {
-                                    boolean current = tracker.isFavorite(payload.index());
-                                    tracker.setFavorite(payload.index(), !current);
+                                    int idx = payload.index();
+                                    if (idx < 0 || idx >= tracker.size()) break;
+                                    boolean current = tracker.isFavorite(idx);
+                                    tracker.setFavorite(idx, !current);
                                 }
-                                case RENAME -> payload.data().ifPresent(name -> tracker.renameBed(payload.index(), name));
-                                case REMOVE -> tracker.removeBed(payload.index());
+                                case RENAME -> {
+                                    int idx = payload.index();
+                                    if (idx < 0 || idx >= tracker.size()) break;
+                                    payload.data().ifPresent(name -> {
+                                        // defense in depth: also truncate server-side
+                                        String truncated = name.length() > 40 ? name.substring(0, 40) : name;
+                                        tracker.renameBed(idx, truncated);
+                                    });
+                                }
+                                case REMOVE -> {
+                                    int idx = payload.index();
+                                    if (idx < 0 || idx >= tracker.size()) break;
+                                    tracker.removeBed(idx);
+                                }
                                 case REORDER -> {
                                     var oldBeds = new ArrayList<>(tracker.getBeds());
+                                    var order = payload.order();
+                                    
+                                    // Validate BEFORE mutating - ensure all indices valid, no duplicates, correct size
+                                    if (order.size() != oldBeds.size()) {
+                                        break; // Invalid reorder, ignore
+                                    }
+                                    
+                                    boolean valid = true;
+                                    boolean[] seen = new boolean[oldBeds.size()];
+                                    for (int i : order) {
+                                        if (i < 0 || i >= oldBeds.size() || seen[i]) {
+                                            valid = false;
+                                            break;
+                                        }
+                                        seen[i] = true;
+                                    }
+                                    
+                                    if (!valid) {
+                                        break; // Invalid indices or duplicates, ignore
+                                    }
+                                    
+                                    // Now safe to mutate
                                     tracker.clear();
-                                    for (int i : payload.order()) {
-                                        if (i >= 0 && i < oldBeds.size()) {
-                                            BedData bed = oldBeds.get(i);
-                                            tracker.addBed(bed.position(), bed.name(), bed.bedItem(), 100);
-                                            if (bed.favorite()) {
-                                                tracker.setFavorite(tracker.size() - 1, true);
-                                            }
+                                    int maxPoints = Config.MAX_POINTS.get();
+                                    for (int i : order) {
+                                        BedData bed = oldBeds.get(i);
+                                        tracker.addBed(bed.position(), bed.name(), bed.bedItem(), maxPoints);
+                                        if (bed.favorite()) {
+                                            tracker.setFavorite(tracker.size() - 1, true);
                                         }
                                     }
                                 }
@@ -162,8 +211,9 @@ public class RestfulNetwork {
         }
 
         tracker.clear();
+        int maxPoints = Config.MAX_POINTS.get();
         for (int i = 0; i < validBeds.size(); i++) {
-            tracker.addBed(validBeds.get(i).position(), validBeds.get(i).name(), validBeds.get(i).bedItem(), 100);
+            tracker.addBed(validBeds.get(i).position(), validBeds.get(i).name(), validBeds.get(i).bedItem(), maxPoints);
             tracker.setFavorite(i, validFavorites.get(i));
         }
 

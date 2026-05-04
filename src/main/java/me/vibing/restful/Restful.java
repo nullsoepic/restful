@@ -39,8 +39,8 @@ public class Restful {
             .build();
 
     public Restful(IEventBus modEventBus, ModContainer modContainer) {
-        ATTACHMENT_TYPES.register(modEventBus);
         ATTACHMENT_TYPES.register("bed_tracker", () -> BED_TRACKER);
+        ATTACHMENT_TYPES.register(modEventBus);
         
         modEventBus.addListener(RestfulNetwork::register);
         NeoForge.EVENT_BUS.addListener(this::registerCommands);
@@ -48,7 +48,8 @@ public class Restful {
         // PlayerEvent.Clone needs the game bus, not the mod bus
         NeoForge.EVENT_BUS.register(new BedEventHandler());
         
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        // MAX_POINTS is server-side only - each server can have different limits
+        modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
     }
     
     private void registerCommands(RegisterCommandsEvent event) {

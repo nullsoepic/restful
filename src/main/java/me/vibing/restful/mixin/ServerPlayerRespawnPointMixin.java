@@ -35,12 +35,16 @@ public abstract class ServerPlayerRespawnPointMixin extends Player {
     @Unique
     private BedData restful$selectedRespawn = null;
 
-    public ServerPlayerRespawnPointMixin(Level level, BlockPos pos, float yRot, GameProfile gameProfile) {
+    // Mixin constructor must be protected for abstract targets
+    protected ServerPlayerRespawnPointMixin(Level level, BlockPos pos, float yRot, GameProfile gameProfile) {
         super(level, pos, yRot, gameProfile);
     }
     
     @Inject(method = "getRespawnPosition", at = @At("RETURN"), cancellable = true)
     private void restful$getRespawnPos(CallbackInfoReturnable<BlockPos> cir) {
+        // clear any stale selection from previous respawn attempt
+        restful$selectedRespawn = null;
+        
         if (respawnForced) {
             return;
         }

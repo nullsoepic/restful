@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Item;
@@ -27,7 +26,7 @@ public class BedEventHandler {
             return;
         }
 
-        if (event.getHand() != InteractionHand.MAIN_HAND) {
+        if (event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) {
             return;
         }
 
@@ -111,10 +110,9 @@ public class BedEventHandler {
             return;
         }
 
-        boolean respawnedAtSelectedBed = player.level().dimension().equals(selectedBed.position().dimension())
-                && player.blockPosition().closerThan(selectedBed.position().pos(), 10);
-
-        if (!respawnedAtSelectedBed) {
+        // Only remove the bed if it's actually invalid - don't assume based on player position
+        // Player could have been moved by another mod/plugin after respawn
+        if (!BedValidator.isValidRespawnPoint(player, selectedBed.position())) {
             tracker.removeBed(selectedIndex);
             player.sendSystemMessage(Component.translatable(
                     "message.restful.point_was_destroyed", selectedBed.name()));
@@ -131,8 +129,9 @@ public class BedEventHandler {
         BedTracker oldTracker = oldPlayer.getData(Restful.BED_TRACKER);
         BedTracker newTracker = newPlayer.getData(Restful.BED_TRACKER);
 
+        int maxPoints = Config.MAX_POINTS.get();
         for (BedData bed : oldTracker.getBeds()) {
-            newTracker.addBed(bed.position(), bed.name(), bed.bedItem(), 100);
+            newTracker.addBed(bed.position(), bed.name(), bed.bedItem(), maxPoints);
         }
     }
 

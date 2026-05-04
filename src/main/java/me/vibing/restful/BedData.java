@@ -1,10 +1,10 @@
 package me.vibing.restful;
 
+import me.vibing.restful.util.ItemUtil;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
@@ -40,21 +40,8 @@ public record BedData(GlobalPos position, String name, Item bedItem, boolean fav
         
         String name = tag.getString("name");
         
-        Item item = parseBedItem(tag.getString("item"));
+        Item item = ItemUtil.parseBedItem(tag.getString("item"));
         
         return new BedData(pos, name, item, tag.getBoolean("favorite"));
-    }
-    
-    private static Item parseBedItem(String itemId) {
-        if (itemId == null || itemId.isEmpty()) {
-            return Items.RED_BED;
-        }
-        try {
-            ResourceLocation id = ResourceLocation.parse(itemId);
-            Item item = BuiltInRegistries.ITEM.get(id);
-            return item != Items.AIR ? item : Items.RED_BED;
-        } catch (Exception e) {
-            return Items.RED_BED;
-        }
     }
 }

@@ -1,5 +1,6 @@
 package me.vibing.restful.network;
 
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -24,13 +25,27 @@ public record C2SBedActionPacket(Action action, int index, Optional<String> data
             new Type<>(ResourceLocation.parse("restful:bed_action"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, C2SBedActionPacket> STREAM_CODEC = new StreamCodec<>() {
+        // Security limits to prevent malicious clients from causing OOM or other issues
+        private static final int MAX_NAME_LENGTH = 40;
+        private static final int MAX_ORDER_SIZE = 1000;
+        
         @Override
         public C2SBedActionPacket decode(RegistryFriendlyByteBuf buf) {
             int actionId = ByteBufCodecs.VAR_INT.decode(buf);
-            Action action = actionId >= 0 && actionId < Action.values().length ? Action.values()[actionId] : Action.SELECT;
+            if (actionId < 0 || actionId >= Action.values().length) {
+                throw new DecoderException("Invalid action ID: " + actionId);
+            }
+            Action action = Action.values()[actionId];
+            
             int index = ByteBufCodecs.VAR_INT.decode(buf);
+            
+            // Decode optional and limit string length to prevent memory exhaustion attacks
             Optional<String> data = ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8).decode(buf);
-            List<Integer> order = ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()).decode(buf);
+            data = data.map(s -> s.length() > MAX_NAME_LENGTH ? s.substring(0, MAX_NAME_LENGTH) : s);
+            
+            // Limit list size to prevent memory exhaustion attacks
+            List<Integer> order = ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(MAX_ORDER_SIZE)).decode(buf);
+            
             return new C2SBedActionPacket(action, index, data, order);
         }
 
