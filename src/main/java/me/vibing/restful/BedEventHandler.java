@@ -64,7 +64,7 @@ public class BedEventHandler {
                 return;
             }
 
-            handleRespawnBlock(serverPlayer, GlobalPos.of(level.dimension(), pos), "Anchor", Items.RESPAWN_ANCHOR);
+            handleRespawnBlock(serverPlayer, GlobalPos.of(level.dimension(), pos), null, Items.RESPAWN_ANCHOR);
         }
     }
 

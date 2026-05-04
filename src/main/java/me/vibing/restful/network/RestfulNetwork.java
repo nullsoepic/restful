@@ -5,7 +5,10 @@ import me.vibing.restful.BedTracker;
 import me.vibing.restful.BedValidator;
 import me.vibing.restful.Restful;
 import net.minecraft.client.Minecraft;
+import me.vibing.restful.client.BedManagementScreen;
+import me.vibing.restful.client.BedSelectionScreen;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -20,14 +23,14 @@ public class RestfulNetwork {
         final PayloadRegistrar registrar = event.registrar(Restful.MODID);
 
         registrar.playToClient(
-                BedSelectionPacket.TYPE,
-                BedSelectionPacket.STREAM_CODEC,
+                S2CBedListPacket.TYPE,
+                S2CBedListPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         Minecraft minecraft = Minecraft.getInstance();
                         if (minecraft.player != null) {
                             minecraft.execute(() -> {
-                                minecraft.setScreen(new me.vibing.restful.client.BedSelectionScreen(payload.beds()));
+                                minecraft.setScreen(new BedSelectionScreen(payload.beds()));
                             });
                         }
                     });
@@ -35,14 +38,14 @@ public class RestfulNetwork {
         );
 
         registrar.playToClient(
-                OpenManagementPacket.TYPE,
-                OpenManagementPacket.STREAM_CODEC,
+                S2COpenManagementPacket.TYPE,
+                S2COpenManagementPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         Minecraft minecraft = Minecraft.getInstance();
                         if (minecraft.player != null) {
                             minecraft.execute(() -> {
-                                minecraft.setScreen(new me.vibing.restful.client.BedManagementScreen(payload.beds()));
+                                minecraft.setScreen(new BedManagementScreen(payload.beds()));
                             });
                         }
                     });
@@ -50,8 +53,8 @@ public class RestfulNetwork {
         );
 
         registrar.playToClient(
-                RespawnNowPacket.TYPE,
-                RespawnNowPacket.STREAM_CODEC,
+                S2CRespawnNowPacket.TYPE,
+                S2CRespawnNowPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         Minecraft minecraft = Minecraft.getInstance();
@@ -67,73 +70,39 @@ public class RestfulNetwork {
         );
 
         registrar.playToServer(
-                SelectBedPacket.TYPE,
-                SelectBedPacket.STREAM_CODEC,
+                C2SBedActionPacket.TYPE,
+                C2SBedActionPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         if (context.player() instanceof ServerPlayer serverPlayer) {
                             BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
-
-                            if (payload.selectedIndex() < 0 || payload.selectedIndex() >= tracker.size()) {
-                                sendBedSelection(serverPlayer);
-                                return;
-                            }
-
-                            BedData selectedBed = tracker.getBed(payload.selectedIndex());
-
-                            if (selectedBed == null) {
-                                sendBedSelection(serverPlayer);
-                                return;
-                            }
-
-                            var targetLevel = serverPlayer.server.getLevel(selectedBed.position().dimension());
-                            if (targetLevel == null) {
-                                tracker.removeBed(payload.selectedIndex());
-                                sendBedSelection(serverPlayer);
-                                return;
-                            }
-
-                            var chunk = targetLevel.getChunkSource().getChunk(
-                                    selectedBed.position().pos().getX() >> 4,
-                                    selectedBed.position().pos().getZ() >> 4,
-                                    true);
-
-                            if (!BedValidator.isValidRespawnPoint(serverPlayer, selectedBed.position())) {
-                                tracker.removeBed(payload.selectedIndex());
-
-                                if (tracker.isEmpty()) {
-                                    PacketDistributor.sendToPlayer(serverPlayer, new RespawnNowPacket());
-                                } else {
-                                    sendBedSelection(serverPlayer);
+                            switch (payload.action()) {
+                                case SELECT -> {
+                                    var result = validateBed(payload.index(), serverPlayer, tracker);
+                                    if (!result.valid()) {
+                                        handleInvalidBed(serverPlayer, tracker, payload.index(), result.reason());
+                                        return;
+                                    }
+                                    tracker.setSelectedBedIndex(payload.index());
+                                    PacketDistributor.sendToPlayer(serverPlayer, new S2CRespawnNowPacket());
                                 }
-                                return;
-                            }
-
-                            tracker.setSelectedBedIndex(payload.selectedIndex());
-                            PacketDistributor.sendToPlayer(serverPlayer, new RespawnNowPacket());
-                        }
-                    });
-                }
-        );
-
-        // Management packets
-        registrar.playToServer(
-                ReorderBedPacket.TYPE,
-                ReorderBedPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        if (context.player() instanceof ServerPlayer serverPlayer) {
-                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
-                            // rebuild tracker in new order, preserving favorites
-                            var oldBeds = new ArrayList<>(tracker.getBeds());
-                            tracker.clear();
-                            for (int i : payload.newOrder()) {
-                                if (i >= 0 && i < oldBeds.size()) {
-                                    BedData bed = oldBeds.get(i);
-                                    // add with favorite status preserved
-                                    tracker.addBed(bed.position(), bed.name(), bed.bedItem(), 100);
-                                    if (bed.favorite()) {
-                                        tracker.setFavorite(tracker.size() - 1, true);
+                                case FAVORITE -> {
+                                    boolean current = tracker.isFavorite(payload.index());
+                                    tracker.setFavorite(payload.index(), !current);
+                                }
+                                case RENAME -> payload.data().ifPresent(name -> tracker.renameBed(payload.index(), name));
+                                case REMOVE -> tracker.removeBed(payload.index());
+                                case REORDER -> {
+                                    var oldBeds = new ArrayList<>(tracker.getBeds());
+                                    tracker.clear();
+                                    for (int i : payload.order()) {
+                                        if (i >= 0 && i < oldBeds.size()) {
+                                            BedData bed = oldBeds.get(i);
+                                            tracker.addBed(bed.position(), bed.name(), bed.bedItem(), 100);
+                                            if (bed.favorite()) {
+                                                tracker.setFavorite(tracker.size() - 1, true);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -141,46 +110,52 @@ public class RestfulNetwork {
                     });
                 }
         );
+    }
 
-        registrar.playToServer(
-                RenameBedPacket.TYPE,
-                RenameBedPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        if (context.player() instanceof ServerPlayer serverPlayer) {
-                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
-                            tracker.renameBed(payload.index(), payload.newName());
-                        }
-                    });
-                }
-        );
+    private record ValidationResult(boolean valid, ValidationFailureReason reason) {}
 
-        registrar.playToServer(
-                RemoveBedPacket.TYPE,
-                RemoveBedPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        if (context.player() instanceof ServerPlayer serverPlayer) {
-                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
-                            tracker.removeBed(payload.index());
-                        }
-                    });
-                }
-        );
+    private enum ValidationFailureReason {
+        OUT_OF_BOUNDS, NULL_BED, MISSING_DIMENSION, INVALID_BLOCK
+    }
 
-        registrar.playToServer(
-                FavoriteBedPacket.TYPE,
-                FavoriteBedPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        if (context.player() instanceof ServerPlayer serverPlayer) {
-                            BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
-                            boolean current = tracker.isFavorite(payload.index());
-                            tracker.setFavorite(payload.index(), !current);
-                        }
-                    });
-                }
-        );
+    private static ValidationResult validateBed(int index, ServerPlayer player, BedTracker tracker) {
+        if (index < 0 || index >= tracker.size()) {
+            return new ValidationResult(false, ValidationFailureReason.OUT_OF_BOUNDS);
+        }
+
+        BedData bed = tracker.getBed(index);
+        if (bed == null) {
+            return new ValidationResult(false, ValidationFailureReason.NULL_BED);
+        }
+
+        ServerLevel targetLevel = player.server.getLevel(bed.position().dimension());
+        if (targetLevel == null) {
+            return new ValidationResult(false, ValidationFailureReason.MISSING_DIMENSION);
+        }
+
+        ensureChunkLoaded(targetLevel, bed.position().pos());
+
+        if (!BedValidator.isValidRespawnPoint(player, bed.position())) {
+            return new ValidationResult(false, ValidationFailureReason.INVALID_BLOCK);
+        }
+
+        return new ValidationResult(true, null);
+    }
+
+    private static void ensureChunkLoaded(ServerLevel level, net.minecraft.core.BlockPos pos) {
+        level.getChunkSource().getChunk(pos.getX() >> 4, pos.getZ() >> 4, true);
+    }
+
+    private static void handleInvalidBed(ServerPlayer player, BedTracker tracker, int index, ValidationFailureReason reason) {
+        if (reason == ValidationFailureReason.MISSING_DIMENSION || reason == ValidationFailureReason.INVALID_BLOCK) {
+            tracker.removeBed(index);
+        }
+
+        if (tracker.isEmpty()) {
+            PacketDistributor.sendToPlayer(player, new S2CRespawnNowPacket());
+        } else {
+            sendBedSelection(player);
+        }
     }
 
     public static void sendBedSelection(ServerPlayer player) {
@@ -189,22 +164,19 @@ public class RestfulNetwork {
         List<BedData> validBeds = new ArrayList<>();
         List<Boolean> validFavorites = new ArrayList<>();
         List<Integer> validIndices = new ArrayList<>();
-        
+
         for (int i = 0; i < tracker.size(); i++) {
             BedData bed = tracker.getBed(i);
             if (bed == null) continue;
-            
+
             var targetLevel = player.server.getLevel(bed.position().dimension());
             if (targetLevel == null) {
                 Restful.LOGGER.debug("Bed {} dimension not found, removing", bed.position());
                 continue;
             }
-            
-            var chunk = targetLevel.getChunkSource().getChunk(
-                    bed.position().pos().getX() >> 4,
-                    bed.position().pos().getZ() >> 4,
-                    true);
-            
+
+            ensureChunkLoaded(targetLevel, bed.position().pos());
+
             if (BedValidator.isValidRespawnPoint(player, bed.position())) {
                 validBeds.add(bed);
                 validFavorites.add(tracker.isFavorite(i));
@@ -220,18 +192,12 @@ public class RestfulNetwork {
             tracker.setFavorite(i, validFavorites.get(i));
         }
 
-        List<BedSelectionPacket.BedInfo> bedInfos = new ArrayList<>();
-        List<BedData> beds = tracker.getBeds();
-
-        for (int i = 0; i < beds.size(); i++) {
-            BedData bed = beds.get(i);
-            bedInfos.add(BedSelectionPacket.BedInfo.fromBedData(bed, i, tracker.isFavorite(i)));
-        }
+        List<BedInfo> bedInfos = tracker.toBedInfoList();
 
         if (!bedInfos.isEmpty()) {
-            PacketDistributor.sendToPlayer(player, new BedSelectionPacket(bedInfos));
+            PacketDistributor.sendToPlayer(player, new S2CBedListPacket(bedInfos));
         } else {
-            PacketDistributor.sendToPlayer(player, new RespawnNowPacket());
+            PacketDistributor.sendToPlayer(player, new S2CRespawnNowPacket());
         }
     }
 }

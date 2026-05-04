@@ -40,17 +40,7 @@ public record BedData(GlobalPos position, String name, Item bedItem, boolean fav
         
         String name = tag.getString("name");
         
-        Item item = Items.RED_BED;
-        try {
-            String itemId = tag.getString("item");
-            ResourceLocation id = ResourceLocation.parse(itemId);
-            Item parsedItem = BuiltInRegistries.ITEM.get(id);
-            if (parsedItem != Items.AIR) {
-                item = parsedItem;
-            }
-        } catch (Exception e) {
-            Restful.LOGGER.debug("Failed to parse bed item: {}", e.getMessage());
-        }
+        Item item = parseBedItem(tag.getString("item"));
         
         return new BedData(pos, name, item, tag.getBoolean("favorite"));
     }
@@ -63,5 +53,18 @@ public record BedData(GlobalPos position, String name, Item bedItem, boolean fav
             case "minecraft:the_end" -> "End";
             default -> dim.replace("minecraft:", "");
         };
+    }
+
+    private static Item parseBedItem(String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return Items.RED_BED;
+        }
+        try {
+            ResourceLocation id = ResourceLocation.parse(itemId);
+            Item item = BuiltInRegistries.ITEM.get(id);
+            return item != Items.AIR ? item : Items.RED_BED;
+        } catch (Exception e) {
+            return Items.RED_BED;
+        }
     }
 }

@@ -1,11 +1,7 @@
 package me.vibing.restful.client;
 
-import me.vibing.restful.Restful;
-import me.vibing.restful.network.BedSelectionPacket;
-import me.vibing.restful.network.FavoriteBedPacket;
-import me.vibing.restful.network.ReorderBedPacket;
-import me.vibing.restful.network.RenameBedPacket;
-import me.vibing.restful.network.RemoveBedPacket;
+import me.vibing.restful.network.BedInfo;
+import me.vibing.restful.network.C2SBedActionPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -39,7 +35,7 @@ public class BedManagementScreen extends Screen {
     private int editingIndex = -1;
     private int pendingRemoveIndex = -1;
 
-    public BedManagementScreen(List<BedSelectionPacket.BedInfo> beds) {
+    public BedManagementScreen(List<BedInfo> beds) {
         super(Component.literal("Manage Respawn Points"));
         this.beds = new ArrayList<>();
         for (int i = 0; i < beds.size(); i++) {
@@ -89,21 +85,19 @@ public class BedManagementScreen extends Screen {
         int scrollbarHeight = Math.max(30, LIST_HEIGHT * LIST_HEIGHT / contentHeight);
         int maxScroll = contentHeight - LIST_HEIGHT;
         int scrollbarY = listTop + (scrollOffset * (LIST_HEIGHT - scrollbarHeight) / maxScroll);
-        
+
         graphics.fill(listLeft + LIST_WIDTH + 6, listTop, listLeft + LIST_WIDTH + 10, listTop + LIST_HEIGHT, 0x20FFFFFF);
         graphics.fill(listLeft + LIST_WIDTH + 6, scrollbarY, listLeft + LIST_WIDTH + 10, scrollbarY + scrollbarHeight, 0x80AAAAAA);
     }
 
     private void drawRow(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, int i, ManagedBed bed, int y) {
         boolean isPendingRemove = pendingRemoveIndex == i;
-        
+
         int bgColor = isPendingRemove ? 0x40FF4444 : (bed.favorite ? 0x25FFD700 : 0x20FFFFFF);
         graphics.fill(listLeft, y, listLeft + LIST_WIDTH, y + ROW_HEIGHT, bgColor);
 
-        // item icon
-        graphics.renderItem(new ItemStack(getItem(bed.info.itemId())), listLeft + 4, y + 6);
+        graphics.renderItem(new ItemStack(parseBedItem(bed.info.itemId())), listLeft + 4, y + 6);
 
-        // name (editable) or coords
         if (editingIndex == i && activeEditBox != null) {
             activeEditBox.setX(listLeft + 28);
             activeEditBox.setY(y + 6);
@@ -116,27 +110,21 @@ public class BedManagementScreen extends Screen {
                 name = font.plainSubstrByWidth(name, maxWidth - 6) + "..";
             }
             graphics.drawString(font, name, listLeft + 28, y + 6, bed.favorite ? 0xFFD700 : 0xFFFFFF);
-            
-            // coords + dim on second line
+
             String coords = String.format("§7%d %d %d", bed.info.position().pos().getX(), bed.info.position().pos().getY(), bed.info.position().pos().getZ());
             String dim = getDimAbbreviation(bed.info.position().dimension().location().toString());
             graphics.drawString(font, coords + " §7" + dim, listLeft + 28, y + 18, 0xAAAAAA);
         }
 
-        // right side buttons - evenly spaced
         int rightX = listLeft + LIST_WIDTH - 8;
-        
-        // remove X (rightmost)
+
         String removeText = isPendingRemove ? "§csure?" : "§c×";
         int removeWidth = font.width(removeText);
         graphics.drawString(font, removeText, rightX - removeWidth, y + 11, 0xFFFFFF);
-        
-        // star
+
         String star = bed.favorite ? "§6★" : "§7☆";
         graphics.drawString(font, star, rightX - 50, y + 11, 0xFFFFFF);
-        
-        // up/down arrows (if not at edges)
-        // up/down arrows - centered in their halves
+
         if (i > 0) {
             String up = isHovered(mouseX, mouseY, rightX - 80, y + 2, 20, 14) ? "§f▲" : "§7▲";
             graphics.drawString(font, up, rightX - 78, y + 4, 0xFFFFFF);
@@ -175,21 +163,18 @@ public class BedManagementScreen extends Screen {
             ManagedBed bed = beds.get(i);
             int rightX = listLeft + LIST_WIDTH - 8;
 
-            // click name to edit
             if (isHovered((int) mouseX, (int) mouseY, listLeft + 28, y, LIST_WIDTH - 160, ROW_HEIGHT)) {
                 startEditing(i);
                 return true;
             }
 
-            // star
             if (isHovered((int) mouseX, (int) mouseY, rightX - 52, y, 24, ROW_HEIGHT)) {
                 bed.favorite = !bed.favorite;
-                PacketDistributor.sendToServer(new FavoriteBedPacket(i));
+                PacketDistributor.sendToServer(C2SBedActionPacket.favorite(i));
                 playClick();
                 return true;
             }
 
-            // arrows
             if (i > 0 && isHovered((int) mouseX, (int) mouseY, rightX - 82, y, 22, 16)) {
                 swapBeds(i, i - 1);
                 return true;
@@ -199,7 +184,6 @@ public class BedManagementScreen extends Screen {
                 return true;
             }
 
-            // remove
             int removeWidth = pendingRemoveIndex == i ? font.width("sure?") + 4 : 12;
             if (isHovered((int) mouseX, (int) mouseY, rightX - removeWidth, y, removeWidth + 4, ROW_HEIGHT)) {
                 if (pendingRemoveIndex == i) {
@@ -265,7 +249,7 @@ public class BedManagementScreen extends Screen {
         if (activeEditBox != null && editingIndex >= 0) {
             String newName = activeEditBox.getValue().trim();
             beds.get(editingIndex).name = newName;
-            PacketDistributor.sendToServer(new RenameBedPacket(editingIndex, newName));
+            PacketDistributor.sendToServer(C2SBedActionPacket.rename(editingIndex, newName));
         }
         cancelEditing();
     }
@@ -286,12 +270,11 @@ public class BedManagementScreen extends Screen {
     }
 
     private void removeBed(int index) {
-        PacketDistributor.sendToServer(new RemoveBedPacket(index));
+        PacketDistributor.sendToServer(C2SBedActionPacket.remove(index));
         beds.remove(index);
         pendingRemoveIndex = -1;
         playClick();
 
-        // adjust scroll if needed
         int contentHeight = beds.size() * ROW_HEIGHT;
         if (contentHeight > LIST_HEIGHT) {
             scrollOffset = Math.min(scrollOffset, contentHeight - LIST_HEIGHT);
@@ -302,13 +285,13 @@ public class BedManagementScreen extends Screen {
 
     private void closeAndSync() {
         if (activeEditBox != null) finishEditing();
-        
+
         List<Integer> newOrder = new ArrayList<>();
         for (ManagedBed bed : beds) {
             newOrder.add(bed.originalIndex);
         }
-        PacketDistributor.sendToServer(new ReorderBedPacket(newOrder));
-        
+        PacketDistributor.sendToServer(C2SBedActionPacket.reorder(newOrder));
+
         onClose();
     }
 
@@ -322,24 +305,26 @@ public class BedManagementScreen extends Screen {
                 SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
-    private Item getItem(String itemId) {
+    private static Item parseBedItem(String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return Items.RED_BED;
+        }
         try {
             ResourceLocation id = ResourceLocation.parse(itemId);
             Item item = BuiltInRegistries.ITEM.get(id);
-            if (item != Items.AIR) return item;
+            return item != Items.AIR ? item : Items.RED_BED;
         } catch (Exception e) {
-            Restful.LOGGER.debug("Failed to parse item id: {}", itemId);
+            return Items.RED_BED;
         }
-        return Items.RED_BED;
     }
 
     private static class ManagedBed {
-        BedSelectionPacket.BedInfo info;
+        BedInfo info;
         String name;
         boolean favorite;
         int originalIndex;
 
-        ManagedBed(BedSelectionPacket.BedInfo info, int originalIndex) {
+        ManagedBed(BedInfo info, int originalIndex) {
             this.info = info;
             this.name = info.name();
             this.favorite = info.isFavorite();

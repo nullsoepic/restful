@@ -9,16 +9,16 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.List;
 
 // server -> client: open bed management GUI with current beds
-public record OpenManagementPacket(List<BedSelectionPacket.BedInfo> beds) implements CustomPacketPayload {
-    
-    public static final Type<OpenManagementPacket> TYPE = 
+public record S2COpenManagementPacket(List<BedInfo> beds) implements CustomPacketPayload {
+
+    public static final Type<S2COpenManagementPacket> TYPE =
             new Type<>(ResourceLocation.parse("restful:open_management"));
-    
-    public static final StreamCodec<RegistryFriendlyByteBuf, OpenManagementPacket> STREAM_CODEC = StreamCodec.composite(
-            BedSelectionPacket.BedInfo.STREAM_CODEC.apply(ByteBufCodecs.list()), OpenManagementPacket::beds,
-            OpenManagementPacket::new
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, S2COpenManagementPacket> STREAM_CODEC = StreamCodec.composite(
+            BedInfo.STREAM_CODEC.apply(ByteBufCodecs.list()), S2COpenManagementPacket::beds,
+            S2COpenManagementPacket::new
     );
-    
+
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;

@@ -1,19 +1,14 @@
 package me.vibing.restful.command;
 
-import me.vibing.restful.BedData;
 import me.vibing.restful.BedTracker;
 import me.vibing.restful.Restful;
-import me.vibing.restful.network.BedSelectionPacket;
-import me.vibing.restful.network.OpenManagementPacket;
+import me.vibing.restful.network.S2COpenManagementPacket;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 // commands for managing respawn points - now just opens the GUI
 public class BedCommands {
@@ -32,19 +27,8 @@ public class BedCommands {
         }
 
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
-        
-        // build bed info list
-        List<BedSelectionPacket.BedInfo> bedInfos = new ArrayList<>();
-        for (int i = 0; i < tracker.size(); i++) {
-            BedData bed = tracker.getBed(i);
-            if (bed != null) {
-                bedInfos.add(BedSelectionPacket.BedInfo.fromBedData(bed, i, tracker.isFavorite(i)));
-            }
-        }
-        
-        // send packet to open management screen on client
-        PacketDistributor.sendToPlayer(player, new OpenManagementPacket(bedInfos));
-        
+        PacketDistributor.sendToPlayer(player, new S2COpenManagementPacket(tracker.toBedInfoList()));
+
         return 1;
     }
 }

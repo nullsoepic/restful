@@ -1,8 +1,7 @@
 package me.vibing.restful.client;
 
-import me.vibing.restful.Restful;
-import me.vibing.restful.network.BedSelectionPacket;
-import me.vibing.restful.network.SelectBedPacket;
+import me.vibing.restful.network.BedInfo;
+import me.vibing.restful.network.C2SBedActionPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -35,10 +34,10 @@ public class BedSelectionScreen extends Screen {
     private static final int COLOR_BORDER_HOVER = 0xFFFFFFFF;
     private static final int COLOR_BORDER_FAVORITE = 0xFFFFD700;
 
-    private final List<BedSelectionPacket.BedInfo> beds;
+    private final List<BedInfo> beds;
     private int gridTop;
 
-    public BedSelectionScreen(List<BedSelectionPacket.BedInfo> beds) {
+    public BedSelectionScreen(List<BedInfo> beds) {
         super(Component.literal("Choose Respawn Point"));
         this.beds = beds;
     }
@@ -75,7 +74,7 @@ public class BedSelectionScreen extends Screen {
             int x = rowStartX + col * (TILE_SIZE + TILE_SPACING);
             int y = gridTop + row * (TILE_SIZE + TILE_SPACING);
 
-            BedSelectionPacket.BedInfo bed = beds.get(i);
+            BedInfo bed = beds.get(i);
 
             boolean hovered = mouseX >= x && mouseX < x + TILE_SIZE
                     && mouseY >= y && mouseY < y + TILE_SIZE;
@@ -86,7 +85,7 @@ public class BedSelectionScreen extends Screen {
             } else {
                 bgColor = hovered ? COLOR_BG_HOVER : COLOR_BG_DEFAULT;
             }
-            
+
             graphics.fill(x + 2, y + 2, x + TILE_SIZE - 2, y + TILE_SIZE - 2, bgColor);
 
             int borderColor;
@@ -105,17 +104,17 @@ public class BedSelectionScreen extends Screen {
             BlockPos pos = bed.position().pos();
             String defaultName = String.format("%d, %d, %d", pos.getX(), pos.getY(), pos.getZ());
             boolean hasCustomName = !name.equals(defaultName);
-            
+
             int numberWidth = (i < 9) ? font.width(String.valueOf(i + 1)) + 8 : 0;
             int starWidth = bed.isFavorite() ? 12 : 0;
             int availableWidth = TILE_SIZE - 10 - numberWidth - starWidth;
-            
+
             int currentX = x + 5;
             if (i < 9) {
                 graphics.drawString(font, String.valueOf(i + 1), currentX, y + 6, 0xFFFFFF);
                 currentX += font.width(String.valueOf(i + 1)) + 4;
             }
-            
+
             if (hasCustomName) {
                 String displayName = name;
                 if (font.width(name) > availableWidth) {
@@ -127,12 +126,12 @@ public class BedSelectionScreen extends Screen {
                 }
                 graphics.drawString(font, Component.literal("§e" + displayName), currentX, y + 6, 0xFFFFD700);
             }
-            
+
             if (bed.isFavorite()) {
                 graphics.drawString(font, "§6★", x + TILE_SIZE - 12, y + 6, 0xFFD700);
             }
 
-            Item item = getItemFromId(bed.itemId());
+            Item item = parseBedItem(bed.itemId());
             int itemX = x + (TILE_SIZE - ITEM_SIZE) / 2;
             int itemY = y + 20;
             renderLargeItem(graphics, new ItemStack(item), itemX, itemY);
@@ -177,7 +176,7 @@ public class BedSelectionScreen extends Screen {
             int x = rowStartX + col * (TILE_SIZE + TILE_SPACING);
             int y = gridTop + row * (TILE_SIZE + TILE_SPACING);
 
-            BedSelectionPacket.BedInfo bed = beds.get(i);
+            BedInfo bed = beds.get(i);
 
             if (mouseX >= x && mouseX < x + TILE_SIZE
                     && mouseY >= y && mouseY < y + TILE_SIZE) {
@@ -189,7 +188,7 @@ public class BedSelectionScreen extends Screen {
     }
 
     private void selectBed(int index) {
-        PacketDistributor.sendToServer(new SelectBedPacket(index));
+        PacketDistributor.sendToServer(C2SBedActionPacket.select(index));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
         Minecraft.getInstance().execute(() -> {
@@ -197,15 +196,17 @@ public class BedSelectionScreen extends Screen {
         });
     }
 
-    private Item getItemFromId(String itemId) {
+    private static Item parseBedItem(String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return Items.RED_BED;
+        }
         try {
             ResourceLocation id = ResourceLocation.parse(itemId);
             Item item = BuiltInRegistries.ITEM.get(id);
-            if (item != Items.AIR) return item;
+            return item != Items.AIR ? item : Items.RED_BED;
         } catch (Exception e) {
-            Restful.LOGGER.debug("Failed to parse item id: {}", itemId);
+            return Items.RED_BED;
         }
-        return Items.RED_BED;
     }
 
     @Override

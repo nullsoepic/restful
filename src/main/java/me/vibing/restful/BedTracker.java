@@ -1,5 +1,6 @@
 package me.vibing.restful;
 
+import me.vibing.restful.network.BedInfo;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -18,36 +19,36 @@ import java.util.List;
 public class BedTracker {
     private final List<BedData> beds = new ArrayList<>();
     private int selectedBedIndex = -1;
-    
+
     public List<BedData> getBeds() {
         return Collections.unmodifiableList(beds);
     }
-    
+
     public int size() {
         return beds.size();
     }
-    
+
     public boolean isEmpty() {
         return beds.isEmpty();
     }
-    
+
     public void clear() {
         beds.clear();
     }
-    
+
     public int getSelectedBedIndex() {
         return selectedBedIndex;
     }
-    
+
     public void setSelectedBedIndex(int index) {
         this.selectedBedIndex = index;
     }
-    
+
     public boolean isFavorite(int index) {
         BedData bed = getBed(index);
         return bed != null && bed.favorite();
     }
-    
+
     public void setFavorite(int index, boolean favorite) {
         BedData old = getBed(index);
         if (old == null) return;
@@ -60,11 +61,11 @@ public class BedTracker {
                 return false;
             }
         }
-        
+
         if (beds.size() >= maxBeds) {
             return false;
         }
-        
+
         beds.add(new BedData(pos, name, bedItem, false));
         return true;
     }
@@ -107,11 +108,11 @@ public class BedTracker {
         if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
             return 0;
         }
-        
+
         int removed = 0;
         for (int i = beds.size() - 1; i >= 0; i--) {
             BedData bed = beds.get(i);
-            
+
             var targetLevel = serverLevel.getServer().getLevel(bed.position().dimension());
             if (targetLevel == null) {
                 Restful.LOGGER.debug("Pruned bed at {} - dimension not found", bed.position());
@@ -119,11 +120,11 @@ public class BedTracker {
                 removed++;
                 continue;
             }
-            
+
             if (!targetLevel.isLoaded(bed.position().pos())) {
                 continue;
             }
-            
+
             boolean valid = BedValidator.isValidRespawnPoint(player, bed.position());
             if (!valid) {
                 Restful.LOGGER.debug("Pruned invalid bed at {}", bed.position());
@@ -139,7 +140,7 @@ public class BedTracker {
         if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
             return null;
         }
-        
+
         for (int i = 0; i < beds.size(); i++) {
             int index = beds.size() - 1 - i;
             if (isFavorite(index)) {
@@ -152,10 +153,10 @@ public class BedTracker {
                 }
             }
         }
-        
+
         for (int i = beds.size() - 1; i >= 0; i--) {
             if (isFavorite(i)) continue;
-            
+
             BedData bed = beds.get(i);
             var targetLevel = serverLevel.getServer().getLevel(bed.position().dimension());
             if (targetLevel == null) continue;
@@ -176,6 +177,15 @@ public class BedTracker {
             }
         }
         return findBestValidBed(player);
+    }
+
+    public List<BedInfo> toBedInfoList() {
+        List<BedInfo> result = new ArrayList<>();
+        for (int i = 0; i < beds.size(); i++) {
+            BedData bed = beds.get(i);
+            result.add(BedInfo.fromBedData(bed, i, isFavorite(i)));
+        }
+        return result;
     }
 
     public CompoundTag toTag() {
