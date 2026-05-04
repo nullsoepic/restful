@@ -45,16 +45,6 @@ public record BedData(GlobalPos position, String name, Item bedItem, boolean fav
         return new BedData(pos, name, item, tag.getBoolean("favorite"));
     }
     
-    public String dimensionDisplay() {
-        String dim = position.dimension().location().toString();
-        return switch (dim) {
-            case "minecraft:overworld" -> "Overworld";
-            case "minecraft:the_nether" -> "Nether";
-            case "minecraft:the_end" -> "End";
-            default -> dim.replace("minecraft:", "");
-        };
-    }
-
     private static Item parseBedItem(String itemId) {
         if (itemId == null || itemId.isEmpty()) {
             return Items.RED_BED;

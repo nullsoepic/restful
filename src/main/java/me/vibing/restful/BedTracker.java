@@ -104,37 +104,6 @@ public class BedTracker {
         return beds.get(index);
     }
 
-    public int pruneInvalid(Player player) {
-        if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
-            return 0;
-        }
-
-        int removed = 0;
-        for (int i = beds.size() - 1; i >= 0; i--) {
-            BedData bed = beds.get(i);
-
-            var targetLevel = serverLevel.getServer().getLevel(bed.position().dimension());
-            if (targetLevel == null) {
-                Restful.LOGGER.debug("Pruned bed at {} - dimension not found", bed.position());
-                beds.remove(i);
-                removed++;
-                continue;
-            }
-
-            if (!targetLevel.isLoaded(bed.position().pos())) {
-                continue;
-            }
-
-            boolean valid = BedValidator.isValidRespawnPoint(player, bed.position());
-            if (!valid) {
-                Restful.LOGGER.debug("Pruned invalid bed at {}", bed.position());
-                beds.remove(i);
-                removed++;
-            }
-        }
-        return removed;
-    }
-
     @Nullable
     public BedData findBestValidBed(Player player) {
         if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {

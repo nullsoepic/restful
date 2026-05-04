@@ -2,6 +2,7 @@ package me.vibing.restful.client;
 
 import me.vibing.restful.network.BedInfo;
 import me.vibing.restful.network.C2SBedActionPacket;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -33,7 +34,7 @@ public class BedManagementScreen extends Screen {
     private int listLeft;
     private EditBox activeEditBox = null;
     private int editingIndex = -1;
-    private int pendingRemoveIndex = -1;
+    private int confirmingRemoveIndex = -1;
 
     public BedManagementScreen(List<BedInfo> beds) {
         super(Component.literal("Manage Respawn Points"));
@@ -57,6 +58,7 @@ public class BedManagementScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        RenderSystem.enableBlend();
         graphics.fill(0, 0, width, height, 0xE0000000);
 
         String titleText = title.getString();
@@ -91,7 +93,7 @@ public class BedManagementScreen extends Screen {
     }
 
     private void drawRow(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, int i, ManagedBed bed, int y) {
-        boolean isPendingRemove = pendingRemoveIndex == i;
+        boolean isPendingRemove = confirmingRemoveIndex == i;
 
         int bgColor = isPendingRemove ? 0x40FF4444 : (bed.favorite ? 0x25FFD700 : 0x20FFFFFF);
         graphics.fill(listLeft, y, listLeft + LIST_WIDTH, y + ROW_HEIGHT, bgColor);
@@ -184,12 +186,12 @@ public class BedManagementScreen extends Screen {
                 return true;
             }
 
-            int removeWidth = pendingRemoveIndex == i ? font.width("sure?") + 4 : 12;
+            int removeWidth = confirmingRemoveIndex == i ? font.width("sure?") + 4 : 12;
             if (isHovered((int) mouseX, (int) mouseY, rightX - removeWidth, y, removeWidth + 4, ROW_HEIGHT)) {
-                if (pendingRemoveIndex == i) {
+                if (confirmingRemoveIndex == i) {
                     removeBed(i);
                 } else {
-                    pendingRemoveIndex = i;
+                    confirmingRemoveIndex = i;
                 }
                 return true;
             }
@@ -272,7 +274,7 @@ public class BedManagementScreen extends Screen {
     private void removeBed(int index) {
         PacketDistributor.sendToServer(C2SBedActionPacket.remove(index));
         beds.remove(index);
-        pendingRemoveIndex = -1;
+        confirmingRemoveIndex = -1;
         playClick();
 
         int contentHeight = beds.size() * ROW_HEIGHT;

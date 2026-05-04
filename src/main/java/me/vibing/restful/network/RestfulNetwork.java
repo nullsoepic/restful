@@ -80,7 +80,7 @@ public class RestfulNetwork {
                                 case SELECT -> {
                                     var result = validateBed(payload.index(), serverPlayer, tracker);
                                     if (!result.valid()) {
-                                        handleInvalidBed(serverPlayer, tracker, payload.index(), result.reason());
+                                        handleInvalidBed(serverPlayer, tracker, payload.index(), result.shouldRemove());
                                         return;
                                     }
                                     tracker.setSelectedBedIndex(payload.index());
@@ -112,42 +112,27 @@ public class RestfulNetwork {
         );
     }
 
-    private record ValidationResult(boolean valid, ValidationFailureReason reason) {}
-
-    private enum ValidationFailureReason {
-        OUT_OF_BOUNDS, NULL_BED, MISSING_DIMENSION, INVALID_BLOCK
-    }
+    private record ValidationResult(boolean valid, boolean shouldRemove) {}
 
     private static ValidationResult validateBed(int index, ServerPlayer player, BedTracker tracker) {
         if (index < 0 || index >= tracker.size()) {
-            return new ValidationResult(false, ValidationFailureReason.OUT_OF_BOUNDS);
+            return new ValidationResult(false, false);
         }
 
         BedData bed = tracker.getBed(index);
         if (bed == null) {
-            return new ValidationResult(false, ValidationFailureReason.NULL_BED);
+            return new ValidationResult(false, false);
         }
-
-        ServerLevel targetLevel = player.server.getLevel(bed.position().dimension());
-        if (targetLevel == null) {
-            return new ValidationResult(false, ValidationFailureReason.MISSING_DIMENSION);
-        }
-
-        ensureChunkLoaded(targetLevel, bed.position().pos());
 
         if (!BedValidator.isValidRespawnPoint(player, bed.position())) {
-            return new ValidationResult(false, ValidationFailureReason.INVALID_BLOCK);
+            return new ValidationResult(false, true);
         }
 
-        return new ValidationResult(true, null);
+        return new ValidationResult(true, false);
     }
 
-    private static void ensureChunkLoaded(ServerLevel level, net.minecraft.core.BlockPos pos) {
-        level.getChunkSource().getChunk(pos.getX() >> 4, pos.getZ() >> 4, true);
-    }
-
-    private static void handleInvalidBed(ServerPlayer player, BedTracker tracker, int index, ValidationFailureReason reason) {
-        if (reason == ValidationFailureReason.MISSING_DIMENSION || reason == ValidationFailureReason.INVALID_BLOCK) {
+    private static void handleInvalidBed(ServerPlayer player, BedTracker tracker, int index, boolean shouldRemove) {
+        if (shouldRemove) {
             tracker.removeBed(index);
         }
 
@@ -163,24 +148,14 @@ public class RestfulNetwork {
 
         List<BedData> validBeds = new ArrayList<>();
         List<Boolean> validFavorites = new ArrayList<>();
-        List<Integer> validIndices = new ArrayList<>();
 
         for (int i = 0; i < tracker.size(); i++) {
             BedData bed = tracker.getBed(i);
             if (bed == null) continue;
 
-            var targetLevel = player.server.getLevel(bed.position().dimension());
-            if (targetLevel == null) {
-                Restful.LOGGER.debug("Bed {} dimension not found, removing", bed.position());
-                continue;
-            }
-
-            ensureChunkLoaded(targetLevel, bed.position().pos());
-
             if (BedValidator.isValidRespawnPoint(player, bed.position())) {
                 validBeds.add(bed);
                 validFavorites.add(tracker.isFavorite(i));
-                validIndices.add(i);
             } else {
                 Restful.LOGGER.debug("Bed {} invalid, removing", bed.position());
             }
