@@ -4,6 +4,7 @@ import me.vibing.restful.BedData;
 import me.vibing.restful.BedTracker;
 import me.vibing.restful.BedValidator;
 import me.vibing.restful.Restful;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -23,7 +24,7 @@ public class RestfulNetwork {
                 BedSelectionPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
-                        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+                        Minecraft minecraft = Minecraft.getInstance();
                         if (minecraft.player != null) {
                             minecraft.execute(() -> {
                                 minecraft.setScreen(new me.vibing.restful.client.BedSelectionScreen(payload.beds()));
@@ -38,7 +39,7 @@ public class RestfulNetwork {
                 OpenManagementPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
-                        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+                        Minecraft minecraft = Minecraft.getInstance();
                         if (minecraft.player != null) {
                             minecraft.execute(() -> {
                                 minecraft.setScreen(new me.vibing.restful.client.BedManagementScreen(payload.beds()));
@@ -53,7 +54,7 @@ public class RestfulNetwork {
                 RespawnNowPacket.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
-                        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+                        Minecraft minecraft = Minecraft.getInstance();
                         if (minecraft.player != null && minecraft.getConnection() != null) {
                             minecraft.execute(() -> {
                                 minecraft.getConnection().send(

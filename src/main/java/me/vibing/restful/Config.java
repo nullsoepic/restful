@@ -10,7 +10,7 @@ public class Config {
             .translation("config.restful.max_points")
             .defineInRange("maxPoints", 5, 0, 100);
 
-    public static final ModConfigSpec.IntValue MAX_BEDS = MAX_POINTS; // Legacy alias
+
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

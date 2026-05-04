@@ -10,10 +10,10 @@ import net.minecraft.world.item.Items;
 
 import javax.annotation.Nullable;
 
-public record BedData(GlobalPos position, String name, Item bedItem, long timestamp, boolean favorite) {
+public record BedData(GlobalPos position, String name, Item bedItem, boolean favorite) {
     
-    public BedData(GlobalPos position, @Nullable String name, Item bedItem, boolean favorite) {
-        this(position, name != null ? name : formatCoords(position), bedItem, System.currentTimeMillis(), favorite);
+    public BedData {
+        if (name == null) name = formatCoords(position);
     }
     
     private static String formatCoords(GlobalPos pos) {
@@ -27,7 +27,7 @@ public record BedData(GlobalPos position, String name, Item bedItem, long timest
                 .ifPresent(posTag -> tag.put("pos", posTag));
         tag.putString("name", name);
         tag.putString("item", BuiltInRegistries.ITEM.getKey(bedItem).toString());
-        tag.putLong("time", timestamp);
+
         tag.putBoolean("favorite", favorite);
         return tag;
     }
@@ -52,7 +52,7 @@ public record BedData(GlobalPos position, String name, Item bedItem, long timest
             Restful.LOGGER.debug("Failed to parse bed item: {}", e.getMessage());
         }
         
-        return new BedData(pos, name, item, tag.getLong("time"), tag.getBoolean("favorite"));
+        return new BedData(pos, name, item, tag.getBoolean("favorite"));
     }
     
     public String dimensionDisplay() {

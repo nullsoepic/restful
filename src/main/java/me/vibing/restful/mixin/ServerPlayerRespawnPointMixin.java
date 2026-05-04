@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import javax.annotation.Nullable;
 
 @Mixin(ServerPlayer.class)
-public abstract class ServerPlayerRespawnMixin extends Player {
+public abstract class ServerPlayerRespawnPointMixin extends Player {
     
     @Shadow
     private boolean respawnForced;
@@ -33,14 +33,14 @@ public abstract class ServerPlayerRespawnMixin extends Player {
     public abstract ResourceKey<Level> getRespawnDimension();
     
     @Unique
-    private BedData backupBeds$selectedRespawn = null;
+    private BedData restful$selectedRespawn = null;
 
-    public ServerPlayerRespawnMixin(Level level, BlockPos pos, float yRot, GameProfile gameProfile) {
+    public ServerPlayerRespawnPointMixin(Level level, BlockPos pos, float yRot, GameProfile gameProfile) {
         super(level, pos, yRot, gameProfile);
     }
     
     @Inject(method = "getRespawnPosition", at = @At("RETURN"), cancellable = true)
-    private void backupBeds$getRespawnPos(CallbackInfoReturnable<BlockPos> cir) {
+    private void restful$getRespawnPos(CallbackInfoReturnable<BlockPos> cir) {
         if (respawnForced) {
             return;
         }
@@ -54,12 +54,12 @@ public abstract class ServerPlayerRespawnMixin extends Player {
                 // if chunk isnt loaded, assume its valid - minecraft handles loading during teleport
                 var serverLevel = ((ServerPlayer)(Object)this).serverLevel().getServer().getLevel(selectedBed.position().dimension());
                 if (serverLevel != null && !serverLevel.isLoaded(selectedBed.position().pos())) {
-                    backupBeds$selectedRespawn = selectedBed;
+                    restful$selectedRespawn = selectedBed;
                     cir.setReturnValue(selectedBed.position().pos());
                     return;
                 }
                 if (BedValidator.isValidRespawnPoint(this, selectedBed.position())) {
-                    backupBeds$selectedRespawn = selectedBed;
+                    restful$selectedRespawn = selectedBed;
                     cir.setReturnValue(selectedBed.position().pos());
                     return;
                 }
@@ -72,34 +72,34 @@ public abstract class ServerPlayerRespawnMixin extends Player {
         if (vanillaPos != null && vanillaDim != null) {
             var vanillaGlobalPos = net.minecraft.core.GlobalPos.of(vanillaDim, vanillaPos);
             if (BedValidator.isValidRespawnPoint(this, vanillaGlobalPos)) {
-                backupBeds$selectedRespawn = null;
+                restful$selectedRespawn = null;
                 return;
             }
         }
         
         BedData respawnBed = tracker.findBestValidBed(this);
         if (respawnBed != null) {
-            backupBeds$selectedRespawn = respawnBed;
+            restful$selectedRespawn = respawnBed;
             cir.setReturnValue(respawnBed.position().pos());
         }
     }
     
     @Inject(method = "getRespawnAngle", at = @At("RETURN"), cancellable = true)
-    private void backupBeds$getRespawnAngle(CallbackInfoReturnable<Float> cir) {
-        if (!respawnForced && backupBeds$selectedRespawn != null) {
+    private void restful$getRespawnAngle(CallbackInfoReturnable<Float> cir) {
+        if (!respawnForced && restful$selectedRespawn != null) {
             // avoid infinite recursion by using current rotation instead of vanilla method
             cir.setReturnValue(this.getYRot());
         }
     }
     
     @Inject(method = "getRespawnDimension", at = @At("RETURN"), cancellable = true)
-    private void backupBeds$getRespawnDimension(CallbackInfoReturnable<ResourceKey<Level>> cir) {
+    private void restful$getRespawnDimension(CallbackInfoReturnable<ResourceKey<Level>> cir) {
         if (respawnForced) {
             return;
         }
         
-        if (backupBeds$selectedRespawn != null) {
-            cir.setReturnValue(backupBeds$selectedRespawn.position().dimension());
+        if (restful$selectedRespawn != null) {
+            cir.setReturnValue(restful$selectedRespawn.position().dimension());
         }
     }
 }

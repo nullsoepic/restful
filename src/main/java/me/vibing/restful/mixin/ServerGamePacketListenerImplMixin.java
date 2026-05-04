@@ -23,7 +23,7 @@ public class ServerGamePacketListenerImplMixin {
     @Inject(method = "handleClientCommand",
             at = @At("HEAD"),
             cancellable = true)
-    private void backupBeds$onRespawnClick(ServerboundClientCommandPacket packet, CallbackInfo ci) {
+    private void restful$onRespawnClick(ServerboundClientCommandPacket packet, CallbackInfo ci) {
         if (packet.getAction() != Action.PERFORM_RESPAWN) {
             return;
         }
