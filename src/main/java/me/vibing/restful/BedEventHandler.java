@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
@@ -51,28 +52,8 @@ public class BedEventHandler {
                 headPos = pos.relative(state.getValue(BedBlock.FACING));
             }
 
-            GlobalPos bedPos = GlobalPos.of(level.dimension(), headPos);
-            BedTracker tracker = player.getData(Restful.BED_TRACKER);
-
-            int existingIndex = findBedIndex(tracker, bedPos);
-            int maxPoints = Config.MAX_POINTS.get();
-            String hexId = BedIdUtil.generateId(bedPos);
-
-            if (existingIndex == -1 && tracker.size() < maxPoints) {
-                var bedItem = BedTracker.getBedItemFromState(state);
-                boolean added = tracker.addBed(bedPos, null, bedItem, maxPoints);
-
-                if (added) {
-                    serverPlayer.sendSystemMessage(Component.translatable(
-                            "message.restful.added_point", hexId));
-                }
-            } else if (existingIndex != -1) {
-                serverPlayer.sendSystemMessage(Component.translatable(
-                        "message.restful.already_have_point", hexId));
-            } else {
-                serverPlayer.sendSystemMessage(Component.translatable(
-                        "message.restful.reached_limit"));
-            }
+            var bedItem = BedTracker.getBedItemFromState(state);
+            handleRespawnBlock(serverPlayer, GlobalPos.of(level.dimension(), headPos), null, bedItem);
         }
 
         if (state.getBlock() instanceof RespawnAnchorBlock) {
@@ -83,27 +64,30 @@ public class BedEventHandler {
                 return;
             }
 
-            GlobalPos anchorPos = GlobalPos.of(level.dimension(), pos);
-            BedTracker tracker = player.getData(Restful.BED_TRACKER);
+            handleRespawnBlock(serverPlayer, GlobalPos.of(level.dimension(), pos), "Anchor", Items.RESPAWN_ANCHOR);
+        }
+    }
 
-            int existingIndex = findBedIndex(tracker, anchorPos);
-            int maxPoints = Config.MAX_POINTS.get();
-            String hexId = BedIdUtil.generateId(anchorPos);
+    private void handleRespawnBlock(ServerPlayer player, GlobalPos pos, String name, Item item) {
+        BedTracker tracker = player.getData(Restful.BED_TRACKER);
 
-            if (existingIndex == -1 && tracker.size() < maxPoints) {
-                boolean added = tracker.addBed(anchorPos, "Anchor", Items.RESPAWN_ANCHOR, maxPoints);
+        int existingIndex = findBedIndex(tracker, pos);
+        int maxPoints = Config.MAX_POINTS.get();
+        String hexId = BedIdUtil.generateId(pos);
 
-                if (added) {
-                    serverPlayer.sendSystemMessage(Component.translatable(
-                            "message.restful.added_point", hexId));
-                }
-            } else if (existingIndex != -1) {
-                serverPlayer.sendSystemMessage(Component.translatable(
-                        "message.restful.already_have_point", hexId));
-            } else {
-                serverPlayer.sendSystemMessage(Component.translatable(
-                        "message.restful.reached_limit"));
+        if (existingIndex == -1 && tracker.size() < maxPoints) {
+            boolean added = tracker.addBed(pos, name, item, maxPoints);
+
+            if (added) {
+                player.sendSystemMessage(Component.translatable(
+                        "message.restful.added_point", hexId));
             }
+        } else if (existingIndex != -1) {
+            player.sendSystemMessage(Component.translatable(
+                    "message.restful.already_have_point", hexId));
+        } else {
+            player.sendSystemMessage(Component.translatable(
+                    "message.restful.reached_limit"));
         }
     }
 
