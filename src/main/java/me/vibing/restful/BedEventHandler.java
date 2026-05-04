@@ -96,28 +96,9 @@ public class BedEventHandler {
             return;
         }
 
+        // beds are validated during sendBedSelection before player sees selection screen
+        // just clear the selection, invalid beds were already filtered out
         BedTracker tracker = player.getData(Restful.BED_TRACKER);
-        int selectedIndex = tracker.getSelectedBedIndex();
-
-        if (selectedIndex < 0) {
-            tracker.setSelectedBedIndex(-1);
-            return;
-        }
-
-        BedData selectedBed = tracker.getBed(selectedIndex);
-        if (selectedBed == null) {
-            tracker.setSelectedBedIndex(-1);
-            return;
-        }
-
-        // Only remove the bed if it's actually invalid - don't assume based on player position
-        // Player could have been moved by another mod/plugin after respawn
-        if (!BedValidator.isValidRespawnPoint(player, selectedBed.position())) {
-            tracker.removeBed(selectedIndex);
-            player.sendSystemMessage(Component.translatable(
-                    "message.restful.point_was_destroyed", selectedBed.name()));
-        }
-
         tracker.setSelectedBedIndex(-1);
     }
 

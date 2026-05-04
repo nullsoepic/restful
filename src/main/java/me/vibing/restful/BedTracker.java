@@ -106,30 +106,21 @@ public class BedTracker {
 
     @Nullable
     public BedData findBestValidBed(Player player) {
-        if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
-            return null;
-        }
-
-        for (int i = 0; i < beds.size(); i++) {
-            int index = beds.size() - 1 - i;
-            if (isFavorite(index)) {
-                BedData bed = beds.get(index);
-                var targetLevel = serverLevel.getServer().getLevel(bed.position().dimension());
-                if (targetLevel == null) continue;
-                if (!targetLevel.isLoaded(bed.position().pos())) continue;
+        // Check favorites first
+        for (int i = beds.size() - 1; i >= 0; i--) {
+            if (isFavorite(i)) {
+                BedData bed = beds.get(i);
                 if (BedValidator.isValidRespawnPoint(player, bed.position())) {
                     return bed;
                 }
             }
         }
 
+        // Then check non-favorites (most recent first)
         for (int i = beds.size() - 1; i >= 0; i--) {
             if (isFavorite(i)) continue;
 
             BedData bed = beds.get(i);
-            var targetLevel = serverLevel.getServer().getLevel(bed.position().dimension());
-            if (targetLevel == null) continue;
-            if (!targetLevel.isLoaded(bed.position().pos())) continue;
             if (BedValidator.isValidRespawnPoint(player, bed.position())) {
                 return bed;
             }

@@ -50,23 +50,14 @@ public abstract class ServerPlayerRespawnPointMixin extends Player {
         }
         
         BedTracker tracker = getData(Restful.BED_TRACKER);
-        
+
         int selectedIndex = tracker.getSelectedBedIndex();
         if (selectedIndex >= 0) {
             BedData selectedBed = tracker.getBed(selectedIndex);
-            if (selectedBed != null) {
-                // if chunk isnt loaded, assume its valid - minecraft handles loading during teleport
-                var serverLevel = ((ServerPlayer)(Object)this).serverLevel().getServer().getLevel(selectedBed.position().dimension());
-                if (serverLevel != null && !serverLevel.isLoaded(selectedBed.position().pos())) {
-                    restful$selectedRespawn = selectedBed;
-                    cir.setReturnValue(selectedBed.position().pos());
-                    return;
-                }
-                if (BedValidator.isValidRespawnPoint(this, selectedBed.position())) {
-                    restful$selectedRespawn = selectedBed;
-                    cir.setReturnValue(selectedBed.position().pos());
-                    return;
-                }
+            if (selectedBed != null && BedValidator.isValidRespawnPoint(this, selectedBed.position())) {
+                restful$selectedRespawn = selectedBed;
+                cir.setReturnValue(selectedBed.position().pos());
+                return;
             }
         }
         
