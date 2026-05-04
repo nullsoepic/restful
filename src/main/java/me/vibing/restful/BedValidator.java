@@ -35,7 +35,6 @@ public class BedValidator {
             return isValidAnchor(state, targetLevel, globalPos);
         }
         
-        // beds explode in nether/end so we only check overworld
         if (state.getBlock() instanceof BedBlock) {
             return isValidBed(targetLevel, globalPos);
         }
@@ -58,10 +57,6 @@ public class BedValidator {
     }
     
     private static boolean isValidBed(ServerLevel level, GlobalPos pos) {
-        if (!level.dimension().equals(Level.OVERWORLD)) {
-            return false;
-        }
-        
         BlockState state = level.getBlockState(pos.pos());
         if (!(state.getBlock() instanceof BedBlock)) {
             return false;

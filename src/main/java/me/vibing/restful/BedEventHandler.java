@@ -41,12 +41,6 @@ public class BedEventHandler {
                 return;
             }
 
-            if (!level.dimension().equals(Level.OVERWORLD)) {
-                serverPlayer.sendSystemMessage(
-                        Component.translatable("message.restful.bed_explodes_here"));
-                return;
-            }
-
             BlockPos headPos = pos;
             if (state.getValue(BedBlock.PART) != BedPart.HEAD) {
                 headPos = pos.relative(state.getValue(BedBlock.FACING));
