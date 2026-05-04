@@ -2,7 +2,6 @@ package me.vibing.restful.client;
 
 import me.vibing.restful.network.BedInfo;
 import me.vibing.restful.network.C2SBedActionPacket;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -58,9 +57,8 @@ public class BedManagementScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        RenderSystem.enableBlend();
-        graphics.fill(0, 0, width, height, 0xE0000000);
-
+        super.render(graphics, mouseX, mouseY, partialTick);
+        
         String titleText = title.getString();
         graphics.drawString(font, titleText, (width - font.width(titleText)) / 2, listTop - 22, 0xFFFFD700);
 
@@ -79,8 +77,6 @@ public class BedManagementScreen extends Screen {
             ManagedBed bed = beds.get(i);
             drawRow(graphics, mouseX, mouseY, partialTick, i, bed, y);
         }
-
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     private void drawScrollbar(GuiGraphics graphics, int contentHeight) {
