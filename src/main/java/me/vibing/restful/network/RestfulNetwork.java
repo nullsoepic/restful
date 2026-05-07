@@ -19,6 +19,11 @@ public class RestfulNetwork {
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(Restful.MODID);
 
+        // Register S2C packet types (no handlers here - those are client-side)
+        registrar.playToClient(S2CBedListPacket.TYPE, S2CBedListPacket.STREAM_CODEC, (payload, context) -> {});
+        registrar.playToClient(S2COpenManagementPacket.TYPE, S2COpenManagementPacket.STREAM_CODEC, (payload, context) -> {});
+        registrar.playToClient(S2CRespawnNowPacket.TYPE, S2CRespawnNowPacket.STREAM_CODEC, (payload, context) -> {});
+
         // C2S packet handler - server processes bed actions
         registrar.playToServer(
                 C2SBedActionPacket.TYPE,
