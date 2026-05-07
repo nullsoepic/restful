@@ -5,10 +5,6 @@ import me.vibing.restful.BedTracker;
 import me.vibing.restful.BedValidator;
 import me.vibing.restful.Config;
 import me.vibing.restful.Restful;
-import net.minecraft.client.Minecraft;
-import me.vibing.restful.client.BedManagementScreen;
-import me.vibing.restful.client.BedSelectionScreen;
-import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -17,71 +13,13 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import java.util.ArrayList;
 import java.util.List;
 
+// Server-side network handlers - client handlers are in RestfulNetworkClient
 public class RestfulNetwork {
 
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(Restful.MODID);
 
-        registrar.playToClient(
-                S2CBedListPacket.TYPE,
-                S2CBedListPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        Minecraft minecraft = Minecraft.getInstance();
-                        // Capture player reference on this thread to avoid race condition
-                        var player = minecraft.player;
-                        if (player != null && player.level() != null) {
-                            minecraft.execute(() -> {
-                                // Check again in case player disconnected during execute scheduling
-                                if (minecraft.player == player) {
-                                    minecraft.setScreen(new BedSelectionScreen(payload.beds()));
-                                }
-                            });
-                        }
-                    });
-                }
-        );
-
-        registrar.playToClient(
-                S2COpenManagementPacket.TYPE,
-                S2COpenManagementPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        Minecraft minecraft = Minecraft.getInstance();
-                        var player = minecraft.player;
-                        if (player != null && player.level() != null) {
-                            minecraft.execute(() -> {
-                                if (minecraft.player == player) {
-                                    minecraft.setScreen(new BedManagementScreen(payload.beds()));
-                                }
-                            });
-                        }
-                    });
-                }
-        );
-
-        registrar.playToClient(
-                S2CRespawnNowPacket.TYPE,
-                S2CRespawnNowPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        Minecraft minecraft = Minecraft.getInstance();
-                        var player = minecraft.player;
-                        var connection = minecraft.getConnection();
-                        if (player != null && player.level() != null && connection != null) {
-                            minecraft.execute(() -> {
-                                // Verify connection still valid before sending
-                                if (minecraft.getConnection() != null) {
-                                    minecraft.getConnection().send(
-                                            new ServerboundClientCommandPacket(
-                                                    ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
-                                }
-                            });
-                        }
-                    });
-                }
-        );
-
+        // C2S packet handler - server processes bed actions
         registrar.playToServer(
                 C2SBedActionPacket.TYPE,
                 C2SBedActionPacket.STREAM_CODEC,
@@ -91,12 +29,14 @@ public class RestfulNetwork {
                             BedTracker tracker = serverPlayer.getData(Restful.BED_TRACKER);
                             switch (payload.action()) {
                                 case SELECT -> {
-                                    var result = validateBed(payload.index(), serverPlayer, tracker);
+                                    int idx = payload.index();
+                                    if (idx < 0 || idx >= tracker.size()) break;
+                                    var result = validateBed(idx, serverPlayer, tracker);
                                     if (!result.valid()) {
-                                        handleInvalidBed(serverPlayer, tracker, payload.index(), result.shouldRemove());
+                                        handleInvalidBed(serverPlayer, tracker, idx, result.shouldRemove());
                                         return;
                                     }
-                                    tracker.setSelectedBedIndex(payload.index());
+                                    tracker.setSelectedBedIndex(idx);
                                     PacketDistributor.sendToPlayer(serverPlayer, new S2CRespawnNowPacket());
                                 }
                                 case FAVORITE -> {
@@ -109,7 +49,6 @@ public class RestfulNetwork {
                                     int idx = payload.index();
                                     if (idx < 0 || idx >= tracker.size()) break;
                                     payload.data().ifPresent(name -> {
-                                        // defense in depth: also truncate server-side
                                         String truncated = name.length() > 40 ? name.substring(0, 40) : name;
                                         tracker.renameBed(idx, truncated);
                                     });
@@ -122,12 +61,9 @@ public class RestfulNetwork {
                                 case REORDER -> {
                                     var oldBeds = new ArrayList<>(tracker.getBeds());
                                     var order = payload.order();
-                                    
-                                    // Validate BEFORE mutating - ensure all indices valid, no duplicates, correct size
-                                    if (order.size() != oldBeds.size()) {
-                                        break; // Invalid reorder, ignore
-                                    }
-                                    
+
+                                    if (order.size() != oldBeds.size()) break;
+
                                     boolean valid = true;
                                     boolean[] seen = new boolean[oldBeds.size()];
                                     for (int i : order) {
@@ -137,12 +73,9 @@ public class RestfulNetwork {
                                         }
                                         seen[i] = true;
                                     }
-                                    
-                                    if (!valid) {
-                                        break; // Invalid indices or duplicates, ignore
-                                    }
-                                    
-                                    // Now safe to mutate
+
+                                    if (!valid) break;
+
                                     tracker.clear();
                                     int maxPoints = Config.MAX_POINTS.get();
                                     for (int i : order) {
