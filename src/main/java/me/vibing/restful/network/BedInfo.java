@@ -2,6 +2,7 @@ package me.vibing.restful.network;
 
 import me.vibing.restful.BedData;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -19,9 +20,8 @@ public record BedInfo(GlobalPos position, String name, String itemId, int index,
     );
 
     public static BedInfo fromBedData(BedData data, int index, boolean isFavorite) {
-        // bedItem can theoretically be null if constructed directly with null
         Item item = data.bedItem();
-        String itemId = item != null ? item.toString() : "minecraft:red_bed";
+        String itemId = item != null ? BuiltInRegistries.ITEM.getKey(item).toString() : "minecraft:red_bed";
         
         return new BedInfo(
                 data.position(),

@@ -31,7 +31,7 @@ public class BedValidator {
         if (!targetLevel.hasChunk(chunkPos.x, chunkPos.z)) {
             ChunkAccess chunk = targetLevel.getChunkSource().getChunk(chunkPos.x, chunkPos.z, ChunkStatus.FULL, true);
             if (chunk == null) {
-                return false; // chunk failed to load somehow
+                return false;
             }
         }
 

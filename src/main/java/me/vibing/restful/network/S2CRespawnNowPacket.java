@@ -5,7 +5,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-// server -> client: trigger immediate respawn
 // Required because server cannot directly force respawn - client must
 // send ServerboundClientCommandPacket.PERFORM_RESPAWN to trigger
 // vanilla respawn logic with proper player state reset.

@@ -10,7 +10,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.List;
 import java.util.Optional;
 
-// client -> server: bed actions (select, favorite, rename, remove, reorder)
 public record C2SBedActionPacket(Action action, int index, Optional<String> data, List<Integer> order) implements CustomPacketPayload {
 
     public enum Action {
@@ -25,7 +24,6 @@ public record C2SBedActionPacket(Action action, int index, Optional<String> data
             new Type<>(ResourceLocation.parse("restful:bed_action"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, C2SBedActionPacket> STREAM_CODEC = new StreamCodec<>() {
-        // Security limits to prevent malicious clients from causing OOM or other issues
         private static final int MAX_NAME_LENGTH = 40;
         private static final int MAX_ORDER_SIZE = 1000;
         
@@ -39,11 +37,9 @@ public record C2SBedActionPacket(Action action, int index, Optional<String> data
             
             int index = ByteBufCodecs.VAR_INT.decode(buf);
             
-            // Decode optional and limit string length to prevent memory exhaustion attacks
             Optional<String> data = ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8).decode(buf);
             data = data.map(s -> s.length() > MAX_NAME_LENGTH ? s.substring(0, MAX_NAME_LENGTH) : s);
             
-            // Limit list size to prevent memory exhaustion attacks
             List<Integer> order = ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(MAX_ORDER_SIZE)).decode(buf);
             
             return new C2SBedActionPacket(action, index, data, order);
@@ -58,7 +54,6 @@ public record C2SBedActionPacket(Action action, int index, Optional<String> data
         }
     };
 
-    // convenience constructors
     public static C2SBedActionPacket select(int index) {
         return new C2SBedActionPacket(Action.SELECT, index, Optional.empty(), List.of());
     }

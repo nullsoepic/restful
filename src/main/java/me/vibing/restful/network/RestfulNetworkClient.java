@@ -10,7 +10,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
-// Client-only network handlers - registered only on CLIENT dist
 @EventBusSubscriber(modid = "restful", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public class RestfulNetworkClient {
 
@@ -21,58 +20,38 @@ public class RestfulNetworkClient {
         registrar.playToClient(
                 S2CBedListPacket.TYPE,
                 S2CBedListPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        Minecraft minecraft = Minecraft.getInstance();
-                        var player = minecraft.player;
-                        if (player != null && player.level() != null) {
-                            minecraft.execute(() -> {
-                                if (minecraft.player == player) {
-                                    minecraft.setScreen(new BedSelectionScreen(payload.beds()));
-                                }
-                            });
-                        }
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() ->
+                    Minecraft.getInstance().execute(() -> {
+                        var mc = Minecraft.getInstance();
+                        if (mc.player == null || mc.player.level() == null) return;
+                        mc.setScreen(new BedSelectionScreen(payload.beds()));
+                    })
+                )
         );
 
         registrar.playToClient(
                 S2COpenManagementPacket.TYPE,
                 S2COpenManagementPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        Minecraft minecraft = Minecraft.getInstance();
-                        var player = minecraft.player;
-                        if (player != null && player.level() != null) {
-                            minecraft.execute(() -> {
-                                if (minecraft.player == player) {
-                                    minecraft.setScreen(new BedManagementScreen(payload.beds()));
-                                }
-                            });
-                        }
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() ->
+                    Minecraft.getInstance().execute(() -> {
+                        var mc = Minecraft.getInstance();
+                        if (mc.player == null || mc.player.level() == null) return;
+                        mc.setScreen(new BedManagementScreen(payload.beds()));
+                    })
+                )
         );
 
         registrar.playToClient(
                 S2CRespawnNowPacket.TYPE,
                 S2CRespawnNowPacket.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        Minecraft minecraft = Minecraft.getInstance();
-                        var player = minecraft.player;
-                        var connection = minecraft.getConnection();
-                        if (player != null && player.level() != null && connection != null) {
-                            minecraft.execute(() -> {
-                                if (minecraft.getConnection() != null) {
-                                    minecraft.getConnection().send(
-                                            new ServerboundClientCommandPacket(
-                                                    ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
-                                }
-                            });
-                        }
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() ->
+                    Minecraft.getInstance().execute(() -> {
+                        var mc = Minecraft.getInstance();
+                        if (mc.player == null || mc.player.level() == null || mc.getConnection() == null) return;
+                        mc.getConnection().send(new ServerboundClientCommandPacket(
+                            ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                    })
+                )
         );
     }
 }

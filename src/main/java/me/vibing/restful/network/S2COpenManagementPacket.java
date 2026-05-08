@@ -8,7 +8,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 
-// server -> client: open bed management GUI with current beds
 public record S2COpenManagementPacket(List<BedInfo> beds) implements CustomPacketPayload {
 
     public static final Type<S2COpenManagementPacket> TYPE =

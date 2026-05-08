@@ -8,7 +8,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 
-// server -> client: send list of available beds for selection
 public record S2CBedListPacket(List<BedInfo> beds) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<S2CBedListPacket> TYPE =

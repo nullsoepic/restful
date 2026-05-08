@@ -25,7 +25,8 @@ public record BedData(GlobalPos position, String name, Item bedItem, boolean fav
                 .resultOrPartial(Restful.LOGGER::error)
                 .ifPresent(posTag -> tag.put("pos", posTag));
         tag.putString("name", name);
-        tag.putString("item", BuiltInRegistries.ITEM.getKey(bedItem).toString());
+        String itemId = bedItem != null ? BuiltInRegistries.ITEM.getKey(bedItem).toString() : "minecraft:red_bed";
+        tag.putString("item", itemId);
 
         tag.putBoolean("favorite", favorite);
         return tag;
